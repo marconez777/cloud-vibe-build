@@ -43,7 +43,7 @@ export default function VibeChat() {
           id: "1",
           role: "assistant",
           content: project.layout_tree
-            ? "Layout carregado! Descreva as alterações que deseja fazer no site."
+            ? "Layout carregado! Agora você pode editar via chat:\n\n• \"mude a cor primária para azul\"\n• \"adicione mais um feature\"\n• \"altere o título do hero para X\"\n• \"remova a seção de FAQ\"\n• \"adicione uma seção de depoimentos\""
             : `Olá! Vou criar o layout para "${project.name}". ${project.description ? `\n\nBriefing: ${project.description}\n\nClique em "Gerar Layout" para começar ou descreva alterações no briefing.` : "Descreva como você quer que o site seja."}`,
           timestamp: new Date(),
         };
@@ -62,6 +62,9 @@ export default function VibeChat() {
     if (isGenerating) return;
 
     setIsGenerating(true);
+    
+    // Determine if this is an edit or a new generation
+    const isEditMode = !!currentLayout && !!userMessage;
 
     // Add user message if provided
     if (userMessage) {
@@ -78,7 +81,7 @@ export default function VibeChat() {
     const thinkingMsg: ChatMessage = {
       id: `thinking-${Date.now()}`,
       role: "assistant",
-      content: "Gerando layout com IA...",
+      content: isEditMode ? "Aplicando modificações..." : "Gerando layout com IA...",
       timestamp: new Date(),
     };
     setMessages((prev) => [...prev, thinkingMsg]);
@@ -88,11 +91,10 @@ export default function VibeChat() {
         body: {
           projectId,
           briefing: project?.description || userMessage,
+          currentLayout: isEditMode ? currentLayout : undefined,
+          editMode: isEditMode,
           messages: userMessage
-            ? messages
-                .filter((m) => m.id !== "1")
-                .map((m) => ({ role: m.role, content: m.content }))
-                .concat([{ role: "user", content: userMessage }])
+            ? [{ role: "user", content: userMessage }]
             : undefined,
         },
       });
@@ -112,16 +114,18 @@ export default function VibeChat() {
         const successMsg: ChatMessage = {
           id: Date.now().toString(),
           role: "assistant",
-          content: "Layout gerado com sucesso! O preview está atualizado à direita. Você pode pedir alterações a qualquer momento.",
+          content: isEditMode 
+            ? "Modificações aplicadas! O preview foi atualizado. Continue pedindo alterações ou digite comandos como:\n\n• \"mude a cor primária para azul\"\n• \"adicione mais um depoimento\"\n• \"remova a seção de FAQ\"\n• \"altere o título do hero\""
+            : "Layout gerado com sucesso! O preview está atualizado à direita. Você pode pedir alterações a qualquer momento.",
           timestamp: new Date(),
         };
         setMessages((prev) => [...prev, successMsg]);
-        toast.success("Layout gerado com sucesso!");
+        toast.success(isEditMode ? "Layout modificado!" : "Layout gerado com sucesso!");
       } else {
         const responseMsg: ChatMessage = {
           id: Date.now().toString(),
           role: "assistant",
-          content: data.message || "Não consegui gerar o layout. Por favor, tente novamente com mais detalhes.",
+          content: data.message || "Não consegui processar sua solicitação. Por favor, tente novamente com mais detalhes.",
           timestamp: new Date(),
         };
         setMessages((prev) => [...prev, responseMsg]);
@@ -133,11 +137,11 @@ export default function VibeChat() {
       const errorMsg: ChatMessage = {
         id: Date.now().toString(),
         role: "assistant",
-        content: "Ocorreu um erro ao gerar o layout. Por favor, tente novamente.",
+        content: "Ocorreu um erro ao processar sua solicitação. Por favor, tente novamente.",
         timestamp: new Date(),
       };
       setMessages((prev) => [...prev, errorMsg]);
-      toast.error("Erro ao gerar layout");
+      toast.error("Erro ao processar");
     } finally {
       setIsGenerating(false);
     }

@@ -8,3 +8,9 @@ verify_jwt = false
 
 [functions.export-zip]
 verify_jwt = false
+
+[functions.generate-files]
+verify_jwt = false
+
+[functions.analyze-design]
+verify_jwt = false

@@ -6,43 +6,55 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-const baseSystemPrompt = `You are an expert web developer specialized in creating FAST, SEO-OPTIMIZED, and VISUALLY STUNNING websites.
+// Code Generator prompt - receives design specs from Design Analyst
+function buildCodeGeneratorPrompt(designSpecs: any) {
+  const colors = designSpecs?.design?.colors || {};
+  const typography = designSpecs?.design?.typography || {};
+  const layout = designSpecs?.design?.layout || {};
+  const components = designSpecs?.design?.components || {};
+  const effects = designSpecs?.design?.effects || {};
 
-## CRITICAL: REFERENCE IMAGE ANALYSIS (HIGHEST PRIORITY)
-When reference images are provided, you MUST analyze them deeply and replicate:
+  return `You are an expert CODE GENERATOR specialized in creating production-ready websites.
 
-1. **COLOR PALETTE**: Extract EXACT colors from the image
-   - Primary color (buttons, CTAs, accents)
-   - Secondary colors (backgrounds, cards)
-   - Text colors (headings, body, muted)
-   - Gradient directions and color stops
+## CRITICAL: USE THESE EXACT DESIGN SPECIFICATIONS (from Design Analyst)
 
-2. **LAYOUT STRUCTURE**: Replicate the visual hierarchy
-   - Header style (sticky, transparent, solid, with logo position)
-   - Hero section layout (text position, image placement, overlays)
-   - Section ordering and spacing
-   - Grid systems (2-col, 3-col, bento, asymmetric)
-   - Card layouts and arrangements
+### COLORS (USE EXACTLY AS PROVIDED):
+--primary: ${colors.primary || "#2D5F88"};
+--primary-light: ${colors.primaryLight || "#4A90D9"};
+--primary-dark: ${colors.primaryDark || "#1E3A5F"};
+--secondary: ${colors.secondary || "#F0FDFA"};
+--accent: ${colors.accent || "#0D9488"};
+--background: ${colors.background || "#FFFFFF"};
+--background-alt: ${colors.backgroundAlt || "#F8FAFC"};
+--text: ${colors.text || "#1F2937"};
+--text-muted: ${colors.textMuted || "#6B7280"};
+--border: ${colors.border || "#E5E7EB"};
+--gradient-start: ${colors.gradientStart || colors.primary || "#2D5F88"};
+--gradient-end: ${colors.gradientEnd || colors.accent || "#0D9488"};
 
-3. **TYPOGRAPHY STYLE**: Match the font feeling
-   - Serif vs Sans-serif choices
-   - Font weight contrasts (light headings vs bold, or vice versa)
-   - Text sizes and hierarchy
-   - Letter spacing and line heights
+### TYPOGRAPHY (USE EXACTLY):
+Google Fonts URL: ${typography.googleFontsUrl || "https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=Open+Sans:wght@300;400;500;600&display=swap"}
+--font-heading: '${typography.headingFont || "Playfair Display"}', ${typography.headingStyle || "serif"};
+--font-body: '${typography.bodyFont || "Open Sans"}', ${typography.bodyStyle || "sans-serif"};
 
-4. **VISUAL ELEMENTS**: Copy design details
-   - Border radius sizes (sharp, rounded, pill-shaped)
-   - Shadow styles (subtle, dramatic, colored)
-   - Icon style (outlined, filled, size)
-   - Decorative elements (blobs, patterns, gradients)
-   - Image treatments (rounded corners, overlays, borders)
+### LAYOUT SPECS:
+Max Width: ${layout.maxWidth || "1200px"}
+Section Padding: ${layout.sectionPadding || "80px"}
+Border Radius Small: ${layout.borderRadius?.small || "8px"}
+Border Radius Medium: ${layout.borderRadius?.medium || "16px"}
+Border Radius Large: ${layout.borderRadius?.large || "24px"}
+Card Shadow: ${layout.shadows?.card || "0 4px 20px rgba(0,0,0,0.08)"}
 
-5. **SPACING & RHYTHM**: Match the breathing room
-   - Section padding (tight, generous, asymmetric)
-   - Element gaps and margins
-   - Content width and alignment
+### COMPONENT STYLES:
+Navbar: ${components.navbar?.style || "sticky"}, ${components.navbar?.background || "glass"}
+Buttons: ${components.buttons?.style || "rounded"}, gradient: ${components.buttons?.hasGradient}, shadow: ${components.buttons?.hasShadow}
+Cards: ${components.cards?.style || "glass"}, hover: ${components.cards?.hasHoverEffect}
+Hero: ${components.hero?.layout || "centered"}, overlay: ${components.hero?.hasOverlay}
 
-**RULE**: The generated site should look like it was designed by the same designer who created the reference image. A user should recognize the visual DNA.
+### EFFECTS TO USE:
+Glassmorphism: ${effects.useGlassmorphism}
+Gradients: ${effects.useGradients}
+Animations: ${effects.useAnimations}
 
 IMPORTANT: Return ONLY a valid JSON object with the following structure:
 {
@@ -57,48 +69,56 @@ IMPORTANT: Return ONLY a valid JSON object with the following structure:
 }
 
 ## REQUIRED FILES TO GENERATE:
-1. index.html - Main page with COMPLETE HTML including header and footer INLINE (NO placeholders)
-2. css/variables.css - CSS custom properties (colors, fonts, spacing)
-3. css/styles.css - Main stylesheet with all component styles
+1. index.html - Main page with COMPLETE HTML including header and footer INLINE
+2. css/variables.css - CSS custom properties using the EXACT colors above
+3. css/styles.css - Main stylesheet importing variables.css correctly
 4. css/responsive.css - Media queries for responsive design
 5. css/animations.css - CSS animations and transitions
 6. js/main.js - Main JavaScript file (menu toggle, smooth scroll, etc.)
 7. js/animations.js - Scroll animations with Intersection Observer
 
-## CRITICAL: HEADER AND FOOTER MUST BE INLINE
-- DO NOT use placeholders like {{ header }} or <div id="header-placeholder">
-- The header and footer HTML MUST be written directly inside index.html
-- This ensures the site works immediately without any JavaScript injection
+## CRITICAL CSS RULES:
 
-## MANDATORY: PROFESSIONAL ICON LIBRARY (Lucide Icons)
-Use Lucide Icons via CDN for ALL icons. Add this in the <head>:
-<script src="https://unpkg.com/lucide@latest"></script>
+### variables.css MUST start with:
+:root {
+  /* Colors - FROM DESIGN ANALYST */
+  --primary: ${colors.primary || "#2D5F88"};
+  --primary-light: ${colors.primaryLight || "#4A90D9"};
+  --primary-dark: ${colors.primaryDark || "#1E3A5F"};
+  --secondary: ${colors.secondary || "#F0FDFA"};
+  --accent: ${colors.accent || "#0D9488"};
+  --background: ${colors.background || "#FFFFFF"};
+  --background-alt: ${colors.backgroundAlt || "#F8FAFC"};
+  --text: ${colors.text || "#1F2937"};
+  --text-muted: ${colors.textMuted || "#6B7280"};
+  --border: ${colors.border || "#E5E7EB"};
+  
+  /* Gradients */
+  --gradient-primary: linear-gradient(135deg, ${colors.gradientStart || colors.primary || "#2D5F88"}, ${colors.gradientEnd || colors.accent || "#0D9488"});
+  
+  /* Typography */
+  --font-heading: '${typography.headingFont || "Playfair Display"}', ${typography.headingStyle || "serif"};
+  --font-body: '${typography.bodyFont || "Open Sans"}', ${typography.bodyStyle || "sans-serif"};
+  
+  /* Layout */
+  --max-width: ${layout.maxWidth || "1200px"};
+  --section-padding: ${layout.sectionPadding || "80px"};
+  --radius-sm: ${layout.borderRadius?.small || "8px"};
+  --radius-md: ${layout.borderRadius?.medium || "16px"};
+  --radius-lg: ${layout.borderRadius?.large || "24px"};
+  
+  /* Shadows */
+  --shadow-card: ${layout.shadows?.card || "0 4px 20px rgba(0,0,0,0.08)"};
+  --shadow-button: ${layout.shadows?.button || "0 4px 14px rgba(0,0,0,0.1)"};
+}
 
-Then use icons like this:
-<i data-lucide="phone" class="icon"></i>
-<i data-lucide="mail" class="icon"></i>
-<i data-lucide="map-pin" class="icon"></i>
-<i data-lucide="clock" class="icon"></i>
-<i data-lucide="star" class="icon"></i>
-<i data-lucide="check" class="icon"></i>
-<i data-lucide="menu" class="icon"></i>
-<i data-lucide="x" class="icon"></i>
-<i data-lucide="chevron-down" class="icon"></i>
-<i data-lucide="facebook" class="icon"></i>
-<i data-lucide="instagram" class="icon"></i>
-<i data-lucide="linkedin" class="icon"></i>
+### styles.css MUST NOT use @import for variables. Instead use <link> tags in HTML:
+<link rel="stylesheet" href="css/variables.css">
+<link rel="stylesheet" href="css/animations.css">
+<link rel="stylesheet" href="css/styles.css">
+<link rel="stylesheet" href="css/responsive.css">
 
-Initialize at end of body: <script>lucide.createIcons();</script>
-
-Style icons consistently:
-.icon { width: 24px; height: 24px; stroke-width: 1.5; }
-.icon-sm { width: 16px; height: 16px; }
-.icon-lg { width: 32px; height: 32px; }
-
-## MANDATORY: RESPONSIVE NAVIGATION MENU
-Every site MUST have a sticky header with responsive menu:
-
-HTML Structure:
+## MANDATORY: PROFESSIONAL NAVBAR (WORKING CODE)
 <header class="navbar">
   <a href="#" class="logo">Logo</a>
   <nav class="nav-menu" id="nav-menu">
@@ -113,24 +133,27 @@ HTML Structure:
   </button>
 </header>
 
-Required CSS:
+Required navbar CSS in styles.css:
 .navbar {
   display: flex;
   justify-content: space-between;
   align-items: center;
   padding: 1rem 5%;
-  background: rgba(255,255,255,0.95);
-  backdrop-filter: blur(10px);
-  position: sticky;
+  background: ${components.navbar?.background === "glass" ? "rgba(255,255,255,0.95)" : "var(--background)"};
+  ${components.navbar?.background === "glass" ? "backdrop-filter: blur(10px);" : ""}
+  position: ${components.navbar?.style || "sticky"};
   top: 0;
   z-index: 1000;
   transition: all 0.3s ease;
 }
-.navbar.scrolled { box-shadow: 0 4px 20px rgba(0,0,0,0.1); }
-.nav-menu { display: flex; gap: 2rem; }
-.nav-link { color: var(--text); text-decoration: none; font-weight: 500; transition: color 0.3s; }
+.navbar.scrolled { box-shadow: var(--shadow-card); }
+.logo { font-family: var(--font-heading); font-size: 1.5rem; font-weight: 700; color: var(--primary); text-decoration: none; }
+.nav-menu { display: flex; gap: 2rem; list-style: none; margin: 0; padding: 0; }
+.nav-link { color: var(--text); text-decoration: none; font-weight: 500; font-family: var(--font-body); transition: color 0.3s; position: relative; }
 .nav-link:hover { color: var(--primary); }
-.hamburger { display: none; background: none; border: none; cursor: pointer; }
+.nav-link::after { content: ''; position: absolute; bottom: -4px; left: 0; width: 0; height: 2px; background: var(--gradient-primary); transition: width 0.3s; }
+.nav-link:hover::after { width: 100%; }
+.hamburger { display: none; background: none; border: none; cursor: pointer; padding: 0.5rem; }
 .hamburger-close { display: none; }
 
 @media (max-width: 768px) {
@@ -151,124 +174,91 @@ Required CSS:
   .nav-menu.active ~ .hamburger .hamburger-close { display: block; }
 }
 
-Required JavaScript (in main.js):
-// Mobile menu toggle
-const hamburger = document.getElementById('hamburger');
-const navMenu = document.getElementById('nav-menu');
-if (hamburger && navMenu) {
-  hamburger.addEventListener('click', () => navMenu.classList.toggle('active'));
-  document.querySelectorAll('.nav-link').forEach(link => {
-    link.addEventListener('click', () => navMenu.classList.remove('active'));
-  });
+## MANDATORY: LUCIDE ICONS
+Add in <head>: <script src="https://unpkg.com/lucide@latest"></script>
+Initialize at end of body: <script>lucide.createIcons();</script>
+
+## MANDATORY: GOOGLE FONTS (via <link>, NEVER @import)
+Add in <head>:
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="${typography.googleFontsUrl || "https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=Open+Sans:wght@300;400;500;600&display=swap"}" rel="stylesheet">
+
+## CARD STYLES (based on design specs)
+.card {
+  background: ${components.cards?.style === "glass" ? "rgba(255,255,255,0.8)" : "var(--background)"};
+  ${components.cards?.style === "glass" ? "backdrop-filter: blur(10px);" : ""}
+  border-radius: var(--radius-lg);
+  padding: 2rem;
+  box-shadow: var(--shadow-card);
+  border: 1px solid var(--border);
+  transition: all 0.3s ease;
 }
-// Navbar scroll effect
-window.addEventListener('scroll', () => {
-  const navbar = document.querySelector('.navbar');
-  if (navbar) navbar.classList.toggle('scrolled', window.scrollY > 50);
-});
-// Smooth scroll
-document.querySelectorAll('a[href^="#"]').forEach(anchor => {
-  anchor.addEventListener('click', function(e) {
-    e.preventDefault();
-    const target = document.querySelector(this.getAttribute('href'));
-    if (target) target.scrollIntoView({ behavior: 'smooth', block: 'start' });
-  });
-});
+${components.cards?.hasHoverEffect ? ".card:hover { transform: translateY(-4px); box-shadow: 0 12px 40px rgba(0,0,0,0.12); }" : ""}
 
-## MANDATORY: GOOGLE FONTS
-Always include professional fonts via <link> tags (NEVER @import):
+## BUTTON STYLES
+.btn-primary {
+  ${components.buttons?.hasGradient ? "background: var(--gradient-primary);" : "background: var(--primary);"}
+  color: white;
+  border: none;
+  padding: 1rem 2rem;
+  border-radius: ${components.buttons?.style === "pill" ? "9999px" : components.buttons?.style === "sharp" ? "4px" : "var(--radius-md)"};
+  font-family: var(--font-body);
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  ${components.buttons?.hasShadow ? "box-shadow: var(--shadow-button);" : ""}
+}
+.btn-primary:hover {
+  transform: translateY(-2px) scale(1.02);
+  ${components.buttons?.hasShadow ? "box-shadow: 0 8px 25px rgba(0,0,0,0.15);" : ""}
+}
 
-For Healthcare/Clinics:
-<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=Open+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
---font-heading: 'Playfair Display', serif;
---font-body: 'Open Sans', sans-serif;
+## HERO SECTION
+.hero {
+  min-height: 90vh;
+  display: flex;
+  align-items: center;
+  justify-content: ${components.hero?.layout === "centered" ? "center" : "flex-start"};
+  text-align: ${components.hero?.layout === "centered" ? "center" : "left"};
+  padding: var(--section-padding) 5%;
+  position: relative;
+  background: var(--background-alt);
+}
+${components.hero?.hasOverlay ? ".hero::before { content: ''; position: absolute; inset: 0; background: linear-gradient(135deg, rgba(0,0,0,0.03) 0%, transparent 50%); pointer-events: none; }" : ""}
 
-For Services/Desentupidoras:
-<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700;800&family=Roboto:wght@300;400;500&display=swap" rel="stylesheet">
---font-heading: 'Montserrat', sans-serif;
---font-body: 'Roboto', sans-serif;
+## SECTIONS
+section {
+  padding: var(--section-padding) 5%;
+}
+.section-title {
+  font-family: var(--font-heading);
+  font-size: clamp(2rem, 5vw, 3rem);
+  color: var(--text);
+  margin-bottom: 1rem;
+}
+.section-subtitle {
+  font-family: var(--font-body);
+  color: var(--text-muted);
+  font-size: 1.125rem;
+  max-width: 600px;
+  margin: 0 auto 3rem;
+}
 
-For Restaurants/Food:
-<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=Nunito:wght@300;400;600&display=swap" rel="stylesheet">
---font-heading: 'Playfair Display', serif;
---font-body: 'Nunito', sans-serif;
+## PERFORMANCE REQUIREMENTS:
+- All images MUST have loading="lazy" and width/height
+- Scripts at end of body with defer
+- Font-display: swap
 
-For Law/Professional:
-<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600;700&family=Source+Sans+Pro:wght@300;400;600&display=swap" rel="stylesheet">
---font-heading: 'Cormorant Garamond', serif;
---font-body: 'Source Sans Pro', sans-serif;
+## SEO REQUIREMENTS:
+- Unique <title> (50-60 chars)
+- Meta description (150-160 chars)
+- Open Graph tags
+- Schema.org JSON-LD
+- Semantic HTML5
 
-## PERFORMANCE REQUIREMENTS (Critical):
-- All images MUST have loading="lazy" and explicit width/height attributes
-- CSS critical path inline in <head> for above-the-fold content
-- All scripts at end of body with defer attribute
-- Preconnect to external fonts: <link rel="preconnect" href="https://fonts.googleapis.com">
-- Font-display: swap for all web fonts
-- Use CSS containment where appropriate
-- Avoid render-blocking resources
-- No CSS @import, use <link> tags instead
-
-## SEO REQUIREMENTS (Mandatory):
-- Unique <title> with brand + keyword (50-60 characters)
-- Meta description compelling and keyword-rich (150-160 characters)
-- Complete Open Graph tags: og:title, og:description, og:image, og:type, og:url
-- Twitter Cards: twitter:card, twitter:title, twitter:description
-- Schema.org JSON-LD for LocalBusiness or Service
-- Canonical URL on all pages
-- Semantic HTML5: header, main, nav, section, article, aside, footer
-- Single H1 per page, proper heading hierarchy (H1 > H2 > H3)
-- Alt text on ALL images with descriptive keywords
-- Internal linking with relevant anchor text
-
-## DESIGN REQUIREMENTS (Modern 2024/2025):
-- Gradients sutis and glassmorphism (backdrop-filter: blur)
-- Border radius generosos: 12-24px for cards and buttons
-- Multi-layer shadows with color tones
-- Typography with weight contrast: light titles + bold headings or vice versa
-- Generous whitespace: 60-100px padding on sections
-- Cards with backdrop-filter blur for depth
-- Bento grid layouts for features/services
-- Vibrant accent colors on CTAs and interactive elements
-- Dark mode as default OR elegant light theme
-- Consistent stroke-width on icons
-
-## ANIMATION REQUIREMENTS:
-- Fade-in on scroll using Intersection Observer (in js/animations.js)
-- Hover effects on cards: transform: translateY(-4px), box-shadow increase
-- All transitions: 300ms ease-out
-- Staggered animations on lists (animation-delay incremental)
-- Micro-interactions on buttons: scale(1.02) on hover
-- Smooth scroll for internal navigation: scroll-behavior: smooth
-
-## SECTIONS TO INCLUDE (based on briefing):
-- Hero section with headline, subheadline, and prominent CTA
-- Features/Services section with icons or cards
-- About section with credibility elements
-- Testimonials section (carousel or grid)
-- Stats/Numbers section (if applicable)
-- FAQ section (if applicable)
-- Contact section with form or contact info
-- Footer with links, social, and legal
-
-## FILE CONTENT EXAMPLES:
-
-### js/animations.js (scroll reveal)
-document.addEventListener('DOMContentLoaded', function() {
-  const observerOptions = { threshold: 0.1, rootMargin: '0px 0px -50px 0px' };
-  const observer = new IntersectionObserver((entries) => {
-    entries.forEach(entry => {
-      if (entry.isIntersecting) {
-        entry.target.classList.add('revealed');
-        observer.unobserve(entry.target);
-      }
-    });
-  }, observerOptions);
-  document.querySelectorAll('.reveal').forEach(el => observer.observe(el));
-});
-
-COLOR SCHEME: Use the provided primary and secondary colors from the briefing, or choose a professional, modern palette based on the business type.
-
-Make the design professional, modern, visually stunning with excellent UX, proper spacing, typography hierarchy, and smooth interactions.`;
+Make the design EXACTLY match the provided design specifications. Do not deviate from the colors, fonts, or layout styles specified above.`;
+}
 
 async function fetchActiveMemories(supabase: any): Promise<string> {
   try {
@@ -284,9 +274,39 @@ async function fetchActiveMemories(supabase: any): Promise<string> {
       .map((m: any) => `[${m.category?.toUpperCase() || m.type.toUpperCase()}] ${m.title}:\n${m.content}`)
       .join("\n\n---\n\n");
 
-    return `\n\n## AI KNOWLEDGE BASE (FOLLOW THESE INSTRUCTIONS STRICTLY):\n\n${memoryContext}`;
+    return `\n\n## AI KNOWLEDGE BASE:\n\n${memoryContext}`;
   } catch {
     return "";
+  }
+}
+
+async function analyzeDesign(briefing: string, referenceImages?: string[]): Promise<any> {
+  const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
+  const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+  
+  console.log("Calling Design Analyst agent...");
+  
+  try {
+    const response = await fetch(`${supabaseUrl}/functions/v1/analyze-design`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${LOVABLE_API_KEY}`,
+      },
+      body: JSON.stringify({ briefing, referenceImages }),
+    });
+
+    if (!response.ok) {
+      console.error("Design Analyst error:", response.status);
+      return null;
+    }
+
+    const data = await response.json();
+    console.log("Design Analyst response:", data.success);
+    return data.designSpecs;
+  } catch (error) {
+    console.error("Error calling Design Analyst:", error);
+    return null;
   }
 }
 
@@ -310,11 +330,11 @@ RULES:
 3. Return ALL files, even unmodified ones
 4. Maintain consistency across all files
 5. Keep the same file structure
-6. Maintain SEO best practices (meta tags, Schema.org, etc.)
-7. Maintain performance optimizations (lazy loading, defer, etc.)
-8. Maintain animation classes and Intersection Observer functionality
-9. Keep Lucide Icons initialization: lucide.createIcons()
-10. Keep responsive menu JavaScript functionality`;
+6. Maintain SEO best practices
+7. Maintain performance optimizations
+8. Keep Lucide Icons initialization
+9. Keep responsive menu JavaScript functionality
+10. PRESERVE the existing color scheme and fonts unless user asks to change`;
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -322,18 +342,18 @@ serve(async (req) => {
   }
 
   try {
-    const { projectId, briefing, currentFiles, editMode, userMessage } = await req.json();
+    const { projectId, briefing, currentFiles, editMode, userMessage, referenceImages } = await req.json();
 
-    console.log("Request for project:", projectId);
+    console.log("=== MULTI-AGENT PIPELINE START ===");
+    console.log("Project:", projectId);
     console.log("Edit mode:", editMode);
-    console.log("Has current files:", !!currentFiles);
+    console.log("Has reference images:", !!referenceImages?.length);
 
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) {
       throw new Error("LOVABLE_API_KEY is not configured");
     }
 
-    // Initialize Supabase client for fetching memories
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseKey);
@@ -342,13 +362,12 @@ serve(async (req) => {
     const memoryContext = await fetchActiveMemories(supabase);
     console.log("Memory context loaded:", memoryContext ? "yes" : "no");
 
-    // Build system prompt with memories
-    const systemPrompt = baseSystemPrompt + memoryContext;
-
-    // Build messages array
-    const messages = [];
+    let systemPrompt: string;
+    const messages: any[] = [];
 
     if (editMode && currentFiles) {
+      // EDIT MODE: Use simple edit prompt
+      console.log("=== EDIT MODE ===");
       messages.push({
         role: "system",
         content: editSystemPrompt + memoryContext,
@@ -358,17 +377,37 @@ serve(async (req) => {
         content: `Current files:\n\n${JSON.stringify(currentFiles, null, 2)}\n\nUser request: ${userMessage}`,
       });
     } else {
+      // GENERATION MODE: Use multi-agent pipeline
+      console.log("=== GENERATION MODE - MULTI-AGENT PIPELINE ===");
+      
+      // Step 1: Call Design Analyst Agent
+      console.log("Step 1: Calling Design Analyst...");
+      const designSpecs = await analyzeDesign(briefing || userMessage, referenceImages);
+      
+      if (designSpecs) {
+        console.log("Design specs received:");
+        console.log("- Primary color:", designSpecs.design?.colors?.primary);
+        console.log("- Heading font:", designSpecs.design?.typography?.headingFont);
+        console.log("- Layout style:", designSpecs.design?.layout?.style);
+      } else {
+        console.log("Using fallback design specs");
+      }
+
+      // Step 2: Build Code Generator prompt with design specs
+      console.log("Step 2: Building Code Generator prompt...");
+      systemPrompt = buildCodeGeneratorPrompt(designSpecs) + memoryContext;
+
       messages.push({
         role: "system",
         content: systemPrompt,
       });
       messages.push({
         role: "user",
-        content: `Create a website with the following briefing:\n\n${briefing}`,
+        content: `Create a complete website with the following briefing:\n\n${briefing || userMessage}\n\nIMPORTANT: Use the EXACT colors and fonts specified in the system prompt. These came from the Design Analyst agent who analyzed the reference images and business context.`,
       });
     }
 
-    console.log("Calling Lovable AI...");
+    console.log("Step 3: Calling Code Generator (Lovable AI)...");
 
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
@@ -379,7 +418,7 @@ serve(async (req) => {
       body: JSON.stringify({
         model: "google/gemini-2.5-flash",
         messages,
-        temperature: 0.7,
+        temperature: 0.5, // Lower for more consistent code output
       }),
     });
 
@@ -396,18 +435,16 @@ serve(async (req) => {
       throw new Error("No content in AI response");
     }
 
-    console.log("AI response received, length:", content.length);
+    console.log("Code Generator response received, length:", content.length);
 
     // Parse the JSON response
     let filesData;
     try {
-      // Try to extract JSON from markdown code blocks if present
       const jsonMatch = content.match(/```(?:json)?\s*([\s\S]*?)```/);
       const jsonStr = jsonMatch ? jsonMatch[1].trim() : content.trim();
       filesData = JSON.parse(jsonStr);
     } catch (e) {
       console.error("JSON parse error:", e);
-      // Try to find JSON object directly
       const jsonStart = content.indexOf("{");
       const jsonEnd = content.lastIndexOf("}");
       if (jsonStart !== -1 && jsonEnd !== -1) {
@@ -424,11 +461,8 @@ serve(async (req) => {
 
     // Save files to database
     if (projectId) {
-
-      // Delete existing files for this project
       await supabase.from("project_files").delete().eq("project_id", projectId);
 
-      // Insert new files
       const filesToInsert = filesData.files.map((file: any) => ({
         project_id: projectId,
         file_path: file.path,
@@ -446,20 +480,20 @@ serve(async (req) => {
         throw insertError;
       }
 
-      // Update project status
       await supabase
         .from("projects")
         .update({ status: "ready", updated_at: new Date().toISOString() })
         .eq("id", projectId);
 
-      console.log("Files saved to database:", filesToInsert.length);
+      console.log("=== PIPELINE COMPLETE ===");
+      console.log("Files saved:", filesToInsert.length);
     }
 
     return new Response(
       JSON.stringify({
         success: true,
         files: filesData.files,
-        message: editMode ? "Arquivos atualizados com sucesso!" : "Arquivos gerados com sucesso!",
+        message: editMode ? "Arquivos atualizados com sucesso!" : "Site gerado com pipeline multi-agent!",
       }),
       {
         headers: { ...corsHeaders, "Content-Type": "application/json" },

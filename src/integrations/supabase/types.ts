@@ -129,6 +129,53 @@ export type Database = {
           },
         ]
       }
+      page_templates: {
+        Row: {
+          created_at: string | null
+          id: string
+          name: string
+          output_folder: string | null
+          output_pattern: string
+          project_id: string
+          source_file_path: string
+          tags: string[]
+          updated_at: string | null
+          variations: Json
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          name: string
+          output_folder?: string | null
+          output_pattern?: string
+          project_id: string
+          source_file_path: string
+          tags?: string[]
+          updated_at?: string | null
+          variations?: Json
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          name?: string
+          output_folder?: string | null
+          output_pattern?: string
+          project_id?: string
+          source_file_path?: string
+          tags?: string[]
+          updated_at?: string | null
+          variations?: Json
+        }
+        Relationships: [
+          {
+            foreignKeyName: "page_templates_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       project_files: {
         Row: {
           content: string

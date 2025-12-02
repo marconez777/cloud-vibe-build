@@ -16,6 +16,7 @@ import {
   FolderTree,
   Copy,
 } from "lucide-react";
+import { ExportOptionsDialog, ExportOptions } from "@/components/export/ExportOptionsDialog";
 import { useProject } from "@/hooks/useProjects";
 import { useProjectFiles, useDeleteProjectFiles } from "@/hooks/useProjectFiles";
 import { useChatMessages, useSaveChatMessage, useClearChatHistory } from "@/hooks/useChatMessages";
@@ -53,6 +54,8 @@ export default function VibeChat() {
   const [activeTab, setActiveTab] = useState<"preview" | "files">("preview");
   const scrollRef = useRef<HTMLDivElement>(null);
   const [initialized, setInitialized] = useState(false);
+  const [exportDialogOpen, setExportDialogOpen] = useState(false);
+  const [isExporting, setIsExporting] = useState(false);
 
   const hasFiles = files && files.length > 0;
 
@@ -235,16 +238,17 @@ export default function VibeChat() {
     }
   };
 
-  const handleExportZip = async () => {
+  const handleExportZip = async (options: ExportOptions) => {
     if (!hasFiles) return;
 
+    setIsExporting(true);
     try {
-      toast.info("Gerando arquivo ZIP...");
-
       const { data, error } = await supabase.functions.invoke("export-zip", {
         body: {
           projectId,
           projectName: project?.name,
+          projectDescription: project?.description,
+          options,
         },
       });
 
@@ -268,11 +272,14 @@ export default function VibeChat() {
         document.body.removeChild(a);
         URL.revokeObjectURL(url);
 
-        toast.success("ZIP exportado com sucesso!");
+        setExportDialogOpen(false);
+        toast.success(`ZIP exportado com ${data.filesCount} arquivos!`);
       }
     } catch (error) {
       console.error("Export error:", error);
       toast.error("Erro ao exportar ZIP");
+    } finally {
+      setIsExporting(false);
     }
   };
 
@@ -428,7 +435,7 @@ export default function VibeChat() {
                     Multiplicar Páginas
                   </Button>
                 </Link>
-                <Button variant="outline" size="sm" onClick={handleExportZip} className="gap-2">
+                <Button variant="outline" size="sm" onClick={() => setExportDialogOpen(true)} className="gap-2">
                   <Download className="h-4 w-4" />
                   Exportar ZIP
                 </Button>
@@ -478,6 +485,16 @@ export default function VibeChat() {
           </div>
         </div>
       </div>
+
+      {/* Export Dialog */}
+      <ExportOptionsDialog
+        open={exportDialogOpen}
+        onOpenChange={setExportDialogOpen}
+        onExport={handleExportZip}
+        isExporting={isExporting}
+        projectName={project.name}
+        filesCount={files?.length || 0}
+      />
     </AppLayout>
   );
 }

@@ -5,3 +5,6 @@ verify_jwt = false
 
 [functions.export-layout]
 verify_jwt = false
+
+[functions.export-zip]
+verify_jwt = false

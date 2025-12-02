@@ -25,6 +25,7 @@ import {
   useDeleteMemory,
   useToggleMemory,
 } from "@/hooks/useAIMemories";
+import { DocumentUpload } from "@/components/DocumentUpload";
 
 export default function Knowledge() {
   const { data: memories, isLoading } = useAIMemories();
@@ -159,17 +160,20 @@ export default function Knowledge() {
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="flex items-center justify-center rounded-lg border border-dashed border-border bg-muted/30 p-8 transition-colors hover:border-primary/50 cursor-pointer">
-                  <div className="text-center">
-                    <FileText className="mx-auto h-10 w-10 text-muted-foreground" />
-                    <p className="mt-3 text-sm font-medium">
-                      Arraste arquivos ou clique para upload
-                    </p>
-                    <p className="mt-1 text-xs text-muted-foreground">
-                      PDF, TXT, MD, DOCX até 10MB cada
-                    </p>
-                  </div>
-                </div>
+                <DocumentUpload
+                  onDocumentUploaded={async (doc) => {
+                    try {
+                      await createMemory.mutateAsync({
+                        title: `Documento: ${doc.name}`,
+                        content: doc.content || `Arquivo carregado: ${doc.url}`,
+                        type: "document",
+                      });
+                      toast.success(`Documento "${doc.name}" adicionado à base de conhecimento`);
+                    } catch {
+                      toast.error("Erro ao salvar documento");
+                    }
+                  }}
+                />
               </CardContent>
             </Card>
 

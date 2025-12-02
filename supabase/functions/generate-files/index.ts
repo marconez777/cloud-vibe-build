@@ -318,6 +318,36 @@ async function analyzeDesign(briefing: string, referenceImages?: string[]): Prom
   }
 }
 
+async function optimizeSEO(files: any[], businessInfo?: any): Promise<any[]> {
+  const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
+  const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+  
+  console.log("Calling SEO Specialist agent...");
+  
+  try {
+    const response = await fetch(`${supabaseUrl}/functions/v1/optimize-seo`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${LOVABLE_API_KEY}`,
+      },
+      body: JSON.stringify({ files, businessInfo }),
+    });
+
+    if (!response.ok) {
+      console.error("SEO Specialist error:", response.status);
+      return files; // Return original files if SEO fails
+    }
+
+    const data = await response.json();
+    console.log("SEO Specialist response:", data.success);
+    return data.files || files;
+  } catch (error) {
+    console.error("Error calling SEO Specialist:", error);
+    return files; // Return original files if SEO fails
+  }
+}
+
 const editSystemPrompt = `You are an expert web developer. Modify the existing website files based on user instructions.
 
 IMPORTANT: Return ONLY a valid JSON object with ALL files (modified and unmodified):
@@ -467,11 +497,23 @@ serve(async (req) => {
       throw new Error("Invalid response structure - missing files array");
     }
 
+    let finalFiles = filesData.files;
+
+    // Step 4: Call SEO Specialist (only for generation mode)
+    if (!editMode) {
+      console.log("Step 4: Calling SEO Specialist...");
+      const optimizedFiles = await optimizeSEO(finalFiles, { briefing: briefing || userMessage });
+      if (optimizedFiles && optimizedFiles.length > 0) {
+        finalFiles = optimizedFiles;
+        console.log("SEO optimizations applied");
+      }
+    }
+
     // Save files to database
     if (projectId) {
       await supabase.from("project_files").delete().eq("project_id", projectId);
 
-      const filesToInsert = filesData.files.map((file: any) => ({
+      const filesToInsert = finalFiles.map((file: any) => ({
         project_id: projectId,
         file_path: file.path,
         file_name: file.name,
@@ -500,8 +542,8 @@ serve(async (req) => {
     return new Response(
       JSON.stringify({
         success: true,
-        files: filesData.files,
-        message: editMode ? "Arquivos atualizados com sucesso!" : "Site gerado com pipeline multi-agent!",
+        files: finalFiles,
+        message: editMode ? "Arquivos atualizados com sucesso!" : "Site gerado com pipeline de 3 agentes!",
       }),
       {
         headers: { ...corsHeaders, "Content-Type": "application/json" },

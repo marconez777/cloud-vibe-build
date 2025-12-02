@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Palette, Eye, Code, Sparkles, Check, Loader2 } from "lucide-react";
+import { Palette, Eye, Code, Sparkles, Check, Loader2, Search } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface GenerationProgressProps {
@@ -11,7 +11,8 @@ const generationSteps = [
   { id: "analyzing", label: "Analisando design...", sublabel: "Extraindo cores e fontes", icon: Eye },
   { id: "designing", label: "Design Analyst", sublabel: "Criando especificações", icon: Palette },
   { id: "coding", label: "Code Generator", sublabel: "Gerando HTML/CSS/JS", icon: Code },
-  { id: "finalizing", label: "Finalizando", sublabel: "Otimizando arquivos", icon: Sparkles },
+  { id: "seo", label: "SEO Specialist", sublabel: "Otimizando SEO", icon: Search },
+  { id: "finalizing", label: "Finalizando", sublabel: "Salvando arquivos", icon: Sparkles },
 ];
 
 const editSteps = [
@@ -51,7 +52,7 @@ export function GenerationProgress({ isGenerating, editMode }: GenerationProgres
 
     const durations = editMode 
       ? [800, 1500, 500] 
-      : [2000, 4000, 6000, 2000]; // Longer for multi-agent pipeline
+      : [2000, 4000, 5000, 4000, 2000]; // 5 steps for 3-agent pipeline
 
     let totalTime = 0;
     const timers: NodeJS.Timeout[] = [];
@@ -83,7 +84,7 @@ export function GenerationProgress({ isGenerating, editMode }: GenerationProgres
             {editMode ? "Modificando arquivos" : "Pipeline Multi-Agent"}
           </p>
           <p className="text-xs text-muted-foreground">
-            {editMode ? "Aplicando suas mudanças" : "Design Analyst → Code Generator"}
+            {editMode ? "Aplicando suas mudanças" : "Design → Code → SEO"}
           </p>
         </div>
       </div>

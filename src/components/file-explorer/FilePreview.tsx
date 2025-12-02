@@ -22,11 +22,19 @@ export function FilePreview({ files }: FilePreviewProps) {
       }
     }
 
-    // Replace placeholders in index.html
+    // Replace placeholders in index.html (support both formats)
     let html = indexFile.content;
     for (const [name, content] of Object.entries(componentsMap)) {
-      const placeholder = new RegExp(`{{\\s*${name}\\s*}}`, "gi");
-      html = html.replace(placeholder, content);
+      // Format 1: {{ header }} - mustache style
+      const mustachePlaceholder = new RegExp(`{{\\s*${name}\\s*}}`, "gi");
+      html = html.replace(mustachePlaceholder, content);
+      
+      // Format 2: <div id="header-placeholder"></div> - element style
+      const elementPlaceholder = new RegExp(
+        `<div[^>]*id=["']${name}-placeholder["'][^>]*>\\s*</div>`,
+        "gi"
+      );
+      html = html.replace(elementPlaceholder, content);
     }
 
     // Collect CSS

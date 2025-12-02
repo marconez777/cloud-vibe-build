@@ -21,18 +21,146 @@ IMPORTANT: Return ONLY a valid JSON object with the following structure:
 }
 
 ## REQUIRED FILES TO GENERATE:
-1. index.html - Main page with complete HTML5 structure
+1. index.html - Main page with COMPLETE HTML including header and footer INLINE (NO placeholders)
 2. css/variables.css - CSS custom properties (colors, fonts, spacing)
 3. css/styles.css - Main stylesheet with all component styles
 4. css/responsive.css - Media queries for responsive design
 5. css/animations.css - CSS animations and transitions
-6. components/header.html - Header/navigation component
-7. components/footer.html - Footer component
-8. js/main.js - Main JavaScript file
-9. js/animations.js - Scroll animations with Intersection Observer
-10. sitemap.xml - Basic sitemap structure
-11. robots.txt - Basic robots configuration
-12. manifest.json - PWA manifest file
+6. js/main.js - Main JavaScript file (menu toggle, smooth scroll, etc.)
+7. js/animations.js - Scroll animations with Intersection Observer
+
+## CRITICAL: HEADER AND FOOTER MUST BE INLINE
+- DO NOT use placeholders like {{ header }} or <div id="header-placeholder">
+- The header and footer HTML MUST be written directly inside index.html
+- This ensures the site works immediately without any JavaScript injection
+
+## MANDATORY: PROFESSIONAL ICON LIBRARY (Lucide Icons)
+Use Lucide Icons via CDN for ALL icons. Add this in the <head>:
+<script src="https://unpkg.com/lucide@latest"></script>
+
+Then use icons like this:
+<i data-lucide="phone" class="icon"></i>
+<i data-lucide="mail" class="icon"></i>
+<i data-lucide="map-pin" class="icon"></i>
+<i data-lucide="clock" class="icon"></i>
+<i data-lucide="star" class="icon"></i>
+<i data-lucide="check" class="icon"></i>
+<i data-lucide="menu" class="icon"></i>
+<i data-lucide="x" class="icon"></i>
+<i data-lucide="chevron-down" class="icon"></i>
+<i data-lucide="facebook" class="icon"></i>
+<i data-lucide="instagram" class="icon"></i>
+<i data-lucide="linkedin" class="icon"></i>
+
+Initialize at end of body: <script>lucide.createIcons();</script>
+
+Style icons consistently:
+.icon { width: 24px; height: 24px; stroke-width: 1.5; }
+.icon-sm { width: 16px; height: 16px; }
+.icon-lg { width: 32px; height: 32px; }
+
+## MANDATORY: RESPONSIVE NAVIGATION MENU
+Every site MUST have a sticky header with responsive menu:
+
+HTML Structure:
+<header class="navbar">
+  <a href="#" class="logo">Logo</a>
+  <nav class="nav-menu" id="nav-menu">
+    <a href="#home" class="nav-link">Home</a>
+    <a href="#services" class="nav-link">Serviços</a>
+    <a href="#about" class="nav-link">Sobre</a>
+    <a href="#contact" class="nav-link">Contato</a>
+  </nav>
+  <button class="hamburger" id="hamburger" aria-label="Menu">
+    <i data-lucide="menu" class="icon hamburger-open"></i>
+    <i data-lucide="x" class="icon hamburger-close"></i>
+  </button>
+</header>
+
+Required CSS:
+.navbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem 5%;
+  background: rgba(255,255,255,0.95);
+  backdrop-filter: blur(10px);
+  position: sticky;
+  top: 0;
+  z-index: 1000;
+  transition: all 0.3s ease;
+}
+.navbar.scrolled { box-shadow: 0 4px 20px rgba(0,0,0,0.1); }
+.nav-menu { display: flex; gap: 2rem; }
+.nav-link { color: var(--text); text-decoration: none; font-weight: 500; transition: color 0.3s; }
+.nav-link:hover { color: var(--primary); }
+.hamburger { display: none; background: none; border: none; cursor: pointer; }
+.hamburger-close { display: none; }
+
+@media (max-width: 768px) {
+  .hamburger { display: flex; }
+  .nav-menu {
+    position: fixed;
+    top: 0; right: -100%;
+    width: 80%; max-width: 300px;
+    height: 100vh;
+    flex-direction: column;
+    background: var(--background);
+    padding: 5rem 2rem;
+    transition: right 0.3s ease;
+    box-shadow: -4px 0 20px rgba(0,0,0,0.1);
+  }
+  .nav-menu.active { right: 0; }
+  .nav-menu.active ~ .hamburger .hamburger-open { display: none; }
+  .nav-menu.active ~ .hamburger .hamburger-close { display: block; }
+}
+
+Required JavaScript (in main.js):
+// Mobile menu toggle
+const hamburger = document.getElementById('hamburger');
+const navMenu = document.getElementById('nav-menu');
+if (hamburger && navMenu) {
+  hamburger.addEventListener('click', () => navMenu.classList.toggle('active'));
+  document.querySelectorAll('.nav-link').forEach(link => {
+    link.addEventListener('click', () => navMenu.classList.remove('active'));
+  });
+}
+// Navbar scroll effect
+window.addEventListener('scroll', () => {
+  const navbar = document.querySelector('.navbar');
+  if (navbar) navbar.classList.toggle('scrolled', window.scrollY > 50);
+});
+// Smooth scroll
+document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+  anchor.addEventListener('click', function(e) {
+    e.preventDefault();
+    const target = document.querySelector(this.getAttribute('href'));
+    if (target) target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  });
+});
+
+## MANDATORY: GOOGLE FONTS
+Always include professional fonts via <link> tags (NEVER @import):
+
+For Healthcare/Clinics:
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=Open+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+--font-heading: 'Playfair Display', serif;
+--font-body: 'Open Sans', sans-serif;
+
+For Services/Desentupidoras:
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700;800&family=Roboto:wght@300;400;500&display=swap" rel="stylesheet">
+--font-heading: 'Montserrat', sans-serif;
+--font-body: 'Roboto', sans-serif;
+
+For Restaurants/Food:
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=Nunito:wght@300;400;600&display=swap" rel="stylesheet">
+--font-heading: 'Playfair Display', serif;
+--font-body: 'Nunito', sans-serif;
+
+For Law/Professional:
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600;700&family=Source+Sans+Pro:wght@300;400;600&display=swap" rel="stylesheet">
+--font-heading: 'Cormorant Garamond', serif;
+--font-body: 'Source Sans Pro', sans-serif;
 
 ## PERFORMANCE REQUIREMENTS (Critical):
 - All images MUST have loading="lazy" and explicit width/height attributes
@@ -88,27 +216,6 @@ IMPORTANT: Return ONLY a valid JSON object with the following structure:
 
 ## FILE CONTENT EXAMPLES:
 
-### sitemap.xml
-<?xml version="1.0" encoding="UTF-8"?>
-<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-  <url><loc>https://example.com/</loc><priority>1.0</priority></url>
-</urlset>
-
-### robots.txt
-User-agent: *
-Allow: /
-Sitemap: https://example.com/sitemap.xml
-
-### manifest.json
-{
-  "name": "Site Name",
-  "short_name": "Site",
-  "start_url": "/",
-  "display": "standalone",
-  "theme_color": "#primary-color",
-  "background_color": "#background-color"
-}
-
 ### js/animations.js (scroll reveal)
 document.addEventListener('DOMContentLoaded', function() {
   const observerOptions = { threshold: 0.1, rootMargin: '0px 0px -50px 0px' };
@@ -123,7 +230,7 @@ document.addEventListener('DOMContentLoaded', function() {
   document.querySelectorAll('.reveal').forEach(el => observer.observe(el));
 });
 
-COLOR SCHEME: Use the provided primary and secondary colors from the briefing, or choose a professional, modern palette.
+COLOR SCHEME: Use the provided primary and secondary colors from the briefing, or choose a professional, modern palette based on the business type.
 
 Make the design professional, modern, visually stunning with excellent UX, proper spacing, typography hierarchy, and smooth interactions.`;
 
@@ -169,7 +276,9 @@ RULES:
 5. Keep the same file structure
 6. Maintain SEO best practices (meta tags, Schema.org, etc.)
 7. Maintain performance optimizations (lazy loading, defer, etc.)
-8. Maintain animation classes and Intersection Observer functionality`;
+8. Maintain animation classes and Intersection Observer functionality
+9. Keep Lucide Icons initialization: lucide.createIcons()
+10. Keep responsive menu JavaScript functionality`;
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {

@@ -1,3 +1,4 @@
+import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
@@ -233,9 +234,9 @@ serve(async (req) => {
     console.log("=== SEO SPECIALIST AGENT START ===");
     console.log("Files to optimize:", files?.length || 0);
 
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    if (!LOVABLE_API_KEY) {
-      throw new Error("LOVABLE_API_KEY is not configured");
+    const OPENAI_API_KEY = Deno.env.get("OPENAI_API_KEY");
+    if (!OPENAI_API_KEY) {
+      throw new Error("OPENAI_API_KEY is not configured");
     }
 
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
@@ -268,28 +269,36 @@ ${JSON.stringify(files, null, 2)}
 
 Return ALL files with SEO optimizations applied.`;
 
-    console.log("Calling SEO Specialist (Lovable AI)...");
+    console.log("Calling OpenAI GPT-4o-mini for SEO optimization...");
 
-    const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+    const response = await fetch("https://api.openai.com/v1/chat/completions", {
       method: "POST",
       headers: {
-        Authorization: `Bearer ${LOVABLE_API_KEY}`,
+        Authorization: `Bearer ${OPENAI_API_KEY}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "google/gemini-2.5-flash",
+        model: "gpt-4o-mini",
         messages: [
           { role: "system", content: fullPrompt },
           { role: "user", content: userMessage },
         ],
-        temperature: 0.3, // Lower for consistent SEO output
+        temperature: 0.3,
+        max_tokens: 16384,
       }),
     });
 
     if (!response.ok) {
       const errorText = await response.text();
-      console.error("SEO API error:", response.status, errorText);
-      throw new Error(`AI API error: ${response.status}`);
+      console.error("OpenAI API error:", response.status, errorText);
+      
+      if (response.status === 429) {
+        throw new Error("Rate limit exceeded. Please try again later.");
+      }
+      if (response.status === 402) {
+        throw new Error("OpenAI billing issue. Please check your account.");
+      }
+      throw new Error(`OpenAI API error: ${response.status}`);
     }
 
     const data = await response.json();

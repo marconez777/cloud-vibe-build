@@ -1,3 +1,4 @@
+import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
@@ -177,9 +178,9 @@ serve(async (req) => {
         memories.map((m) => `### ${m.title}\n${m.content}`).join("\n\n")
       : "";
 
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    if (!LOVABLE_API_KEY) {
-      throw new Error("LOVABLE_API_KEY is not configured");
+    const OPENAI_API_KEY = Deno.env.get("OPENAI_API_KEY");
+    if (!OPENAI_API_KEY) {
+      throw new Error("OPENAI_API_KEY is not configured");
     }
 
     // Build system prompt with memories
@@ -218,25 +219,33 @@ serve(async (req) => {
       content: userContent,
     });
 
-    console.log("Calling Lovable AI for design analysis...");
+    console.log("Calling OpenAI GPT-4o for design analysis...");
 
-    const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+    const response = await fetch("https://api.openai.com/v1/chat/completions", {
       method: "POST",
       headers: {
-        Authorization: `Bearer ${LOVABLE_API_KEY}`,
+        Authorization: `Bearer ${OPENAI_API_KEY}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "google/gemini-2.5-flash",
+        model: "gpt-4o",
         messages,
-        temperature: 0.3, // Lower temperature for more consistent design specs
+        temperature: 0.3,
+        max_tokens: 4096,
       }),
     });
 
     if (!response.ok) {
       const errorText = await response.text();
-      console.error("AI API error:", response.status, errorText);
-      throw new Error(`AI API error: ${response.status}`);
+      console.error("OpenAI API error:", response.status, errorText);
+      
+      if (response.status === 429) {
+        throw new Error("Rate limit exceeded. Please try again later.");
+      }
+      if (response.status === 402) {
+        throw new Error("OpenAI billing issue. Please check your account.");
+      }
+      throw new Error(`OpenAI API error: ${response.status}`);
     }
 
     const data = await response.json();

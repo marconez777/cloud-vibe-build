@@ -15,6 +15,12 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion";
+import {
   Brain,
   Upload,
   Trash2,
@@ -27,10 +33,16 @@ import {
   Filter,
   Pencil,
   X,
+  Shield,
+  Zap,
+  Palette,
+  Search as SearchIcon,
+  LayoutTemplate,
 } from "lucide-react";
 import { toast } from "sonner";
 import {
-  useAIMemories,
+  useSystemMemories,
+  useUserMemories,
   useCreateMemory,
   useDeleteMemory,
   useToggleMemory,
@@ -41,7 +53,8 @@ import {
 import { DocumentUpload } from "@/components/DocumentUpload";
 
 export default function Knowledge() {
-  const { data: memories, isLoading } = useAIMemories();
+  const { data: systemMemories, isLoading: loadingSystem } = useSystemMemories();
+  const { data: userMemories, isLoading: loadingUser } = useUserMemories();
   const createMemory = useCreateMemory();
   const deleteMemory = useDeleteMemory();
   const toggleMemory = useToggleMemory();
@@ -115,12 +128,21 @@ export default function Knowledge() {
     }
   };
 
-  const filteredMemories = memories?.filter(
+  const filteredUserMemories = userMemories?.filter(
     (m) => filterCategory === "all" || m.category === filterCategory
   );
 
   const getCategoryLabel = (category: string) => {
     return MEMORY_CATEGORIES.find((c) => c.value === category)?.label || category;
+  };
+
+  const getCategoryIcon = (category: string) => {
+    switch (category) {
+      case "estrutura": return <SearchIcon className="h-4 w-4" />;
+      case "estilo": return <Palette className="h-4 w-4" />;
+      case "business": return <LayoutTemplate className="h-4 w-4" />;
+      default: return <Zap className="h-4 w-4" />;
+    }
   };
 
   const handleDeleteMemory = async (id: string) => {
@@ -141,7 +163,11 @@ export default function Knowledge() {
     }
   };
 
-  const activeCount = memories?.filter((m) => m.is_active).length || 0;
+  const activeSystemCount = systemMemories?.filter((m) => m.is_active).length || 0;
+  const activeUserCount = userMemories?.filter((m) => m.is_active).length || 0;
+  const totalActive = activeSystemCount + activeUserCount;
+
+  const isLoading = loadingSystem || loadingUser;
 
   return (
     <AppLayout>
@@ -155,10 +181,10 @@ export default function Knowledge() {
             </p>
           </div>
           <div className="flex items-center gap-4">
-            {activeCount > 0 && (
+            {totalActive > 0 && (
               <div className="flex items-center gap-2 text-sm text-muted-foreground">
                 <CheckCircle2 className="h-4 w-4 text-green-500" />
-                {activeCount} memória(s) ativa(s)
+                {totalActive} memória(s) ativa(s)
               </div>
             )}
             <Button variant="hero" onClick={() => setShowForm(true)}>
@@ -171,6 +197,62 @@ export default function Knowledge() {
         <div className="grid gap-8 lg:grid-cols-3">
           {/* Main content */}
           <div className="lg:col-span-2 space-y-6">
+            {/* System Memories Section */}
+            <Card variant="glass">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-base">
+                  <Shield className="h-4 w-4 text-primary" />
+                  Memórias do Sistema
+                  <Badge variant="secondary" className="ml-2 text-xs">
+                    {activeSystemCount}/{systemMemories?.length || 0} ativas
+                  </Badge>
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                {loadingSystem ? (
+                  <div className="flex items-center justify-center p-4">
+                    <Loader2 className="h-6 w-6 animate-spin text-primary" />
+                  </div>
+                ) : systemMemories && systemMemories.length > 0 ? (
+                  <Accordion type="multiple" className="space-y-2">
+                    {systemMemories.map((memory) => (
+                      <AccordionItem
+                        key={memory.id}
+                        value={memory.id}
+                        className={`border rounded-lg px-4 ${!memory.is_active ? "opacity-50" : ""}`}
+                      >
+                        <div className="flex items-center justify-between py-2">
+                          <AccordionTrigger className="flex-1 hover:no-underline py-2">
+                            <div className="flex items-center gap-3 text-left">
+                              {getCategoryIcon(memory.category)}
+                              <div>
+                                <span className="font-medium">{memory.title}</span>
+                                <Badge variant="outline" className="ml-2 text-xs">
+                                  {getCategoryLabel(memory.category)}
+                                </Badge>
+                              </div>
+                            </div>
+                          </AccordionTrigger>
+                          <Switch
+                            checked={memory.is_active}
+                            onCheckedChange={() => handleToggleMemory(memory.id, memory.is_active)}
+                            className="ml-4"
+                          />
+                        </div>
+                        <AccordionContent className="pb-4">
+                          <pre className="whitespace-pre-wrap text-sm text-muted-foreground bg-muted/30 p-4 rounded-lg">
+                            {memory.content}
+                          </pre>
+                        </AccordionContent>
+                      </AccordionItem>
+                    ))}
+                  </Accordion>
+                ) : (
+                  <p className="text-sm text-muted-foreground">Nenhuma memória do sistema encontrada.</p>
+                )}
+              </CardContent>
+            </Card>
+
             {/* Add memory form */}
             {showForm && (
               <Card variant="glass" className="animate-slide-up">
@@ -258,15 +340,15 @@ export default function Knowledge() {
               </CardContent>
             </Card>
 
-            {/* Memories list */}
+            {/* User Memories list */}
             {isLoading ? (
               <div className="flex items-center justify-center p-8">
                 <Loader2 className="h-8 w-8 animate-spin text-primary" />
               </div>
-            ) : memories && memories.length > 0 ? (
+            ) : userMemories && userMemories.length > 0 ? (
               <div className="space-y-4">
                 <div className="flex items-center justify-between">
-                  <h3 className="font-heading font-semibold">Memórias Salvas</h3>
+                  <h3 className="font-heading font-semibold">Suas Memórias</h3>
                   <div className="flex items-center gap-2">
                     <Filter className="h-4 w-4 text-muted-foreground" />
                     <Select value={filterCategory} onValueChange={setFilterCategory}>
@@ -284,7 +366,7 @@ export default function Knowledge() {
                     </Select>
                   </div>
                 </div>
-                {filteredMemories?.map((memory) => (
+                {filteredUserMemories?.map((memory) => (
                   <Card
                     key={memory.id}
                     variant="glass"
@@ -401,10 +483,10 @@ export default function Knowledge() {
                 <Card variant="glass" className="p-8 text-center">
                   <Brain className="mx-auto h-12 w-12 text-muted-foreground" />
                   <h3 className="mt-4 font-heading font-semibold">
-                    Nenhuma memória ainda
+                    Nenhuma memória personalizada
                   </h3>
                   <p className="mt-2 text-sm text-muted-foreground">
-                    Adicione informações para a IA aprender sobre seu negócio
+                    Adicione informações específicas do seu negócio
                   </p>
                 </Card>
               )
@@ -424,33 +506,45 @@ export default function Knowledge() {
                 <p>
                   A base de conhecimento permite que você treine a IA com informações específicas.
                 </p>
-                <p>
-                  As memórias <strong>ativas</strong> são incluídas automaticamente quando a IA gera ou edita seu site.
-                </p>
-                <p>
-                  Use o toggle para ativar/desativar memórias sem precisar deletá-las.
-                </p>
+                <div className="space-y-2">
+                  <p className="font-medium text-foreground">Memórias do Sistema:</p>
+                  <p>
+                    Pré-configuradas com melhores práticas de SEO, performance, design e templates.
+                    Ative/desative conforme necessário.
+                  </p>
+                </div>
+                <div className="space-y-2">
+                  <p className="font-medium text-foreground">Suas Memórias:</p>
+                  <p>
+                    Adicione informações personalizadas sobre seu negócio, preferências e padrões.
+                  </p>
+                </div>
               </CardContent>
             </Card>
 
             <Card variant="glass">
               <CardContent className="p-4">
-                <h4 className="font-semibold text-sm mb-2">Sugestões</h4>
+                <h4 className="font-semibold text-sm mb-2">O que incluir</h4>
                 <ul className="space-y-2 text-xs text-muted-foreground">
-                  <li>• Padrões de cores preferidos</li>
-                  <li>• Estrutura de seções comum</li>
-                  <li>• Textos padrão (footer, about)</li>
-                  <li>• Exemplos de sites que você gosta</li>
-                  <li>• Regras de negócio específicas</li>
+                  <li>• Paleta de cores preferida</li>
+                  <li>• Tipografia e fontes</li>
+                  <li>• Tom de voz dos textos</li>
+                  <li>• Informações da empresa</li>
+                  <li>• Serviços oferecidos</li>
+                  <li>• Diferenciais competitivos</li>
                 </ul>
               </CardContent>
             </Card>
 
-            <Card variant="glass" className="bg-primary/5 border-primary/20">
+            <Card variant="glass" className="border-primary/20 bg-primary/5">
               <CardContent className="p-4">
-                <h4 className="font-semibold text-sm mb-2 text-primary">Dica Pro</h4>
+                <h4 className="font-semibold text-sm mb-2 flex items-center gap-2">
+                  <Zap className="h-4 w-4 text-primary" />
+                  Dica Pro
+                </h4>
                 <p className="text-xs text-muted-foreground">
-                  Adicione instruções como "Sempre use o tom formal" ou "Inclua botão de WhatsApp em todos os sites" para personalizar automaticamente todas as gerações.
+                  Mantenha as memórias do sistema ativas para garantir sites com SEO otimizado,
+                  boa performance e design profissional automaticamente.
                 </p>
               </CardContent>
             </Card>

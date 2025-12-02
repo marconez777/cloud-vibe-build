@@ -1,7 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 
-export type AgentType = "design_analyst" | "code_generator" | "all";
+export type AgentType = "design_analyst" | "code_generator" | "seo_specialist" | "all";
 
 export interface AIMemory {
   id: string;
@@ -36,6 +36,11 @@ export const AGENT_INFO = {
     name: "Code Generator",
     description: "Gera HTML, CSS e JavaScript",
     color: "cyan",
+  },
+  seo_specialist: {
+    name: "SEO Specialist",
+    description: "Otimiza meta tags, Schema.org, breadcrumbs",
+    color: "amber",
   },
   all: {
     name: "Compartilhadas",

@@ -37,6 +37,7 @@ import {
   Share2,
   ArrowRight,
   Sparkles,
+  Search,
 } from "lucide-react";
 import { toast } from "sonner";
 import {
@@ -78,6 +79,9 @@ export default function Knowledge() {
   );
   const codeGeneratorMemories = allMemories?.filter(
     (m) => m.agent === "code_generator"
+  );
+  const seoSpecialistMemories = allMemories?.filter(
+    (m) => m.agent === "seo_specialist"
   );
   const sharedMemories = allMemories?.filter((m) => m.agent === "all");
 
@@ -173,6 +177,8 @@ export default function Knowledge() {
         return <Palette className="h-4 w-4" />;
       case "code_generator":
         return <Code className="h-4 w-4" />;
+      case "seo_specialist":
+        return <Search className="h-4 w-4" />;
       default:
         return <Share2 className="h-4 w-4" />;
     }
@@ -482,18 +488,22 @@ export default function Knowledge() {
 
             {/* Tabs by Agent */}
             <Tabs value={activeTab} onValueChange={setActiveTab}>
-              <TabsList className="grid w-full grid-cols-3">
+              <TabsList className="grid w-full grid-cols-4">
                 <TabsTrigger value="design_analyst" className="flex items-center gap-2">
                   <Palette className="h-4 w-4" />
-                  <span className="hidden sm:inline">Design Analyst</span>
+                  <span className="hidden sm:inline">Design</span>
                 </TabsTrigger>
                 <TabsTrigger value="code_generator" className="flex items-center gap-2">
                   <Code className="h-4 w-4" />
-                  <span className="hidden sm:inline">Code Generator</span>
+                  <span className="hidden sm:inline">Code</span>
+                </TabsTrigger>
+                <TabsTrigger value="seo_specialist" className="flex items-center gap-2">
+                  <Search className="h-4 w-4" />
+                  <span className="hidden sm:inline">SEO</span>
                 </TabsTrigger>
                 <TabsTrigger value="all" className="flex items-center gap-2">
                   <Share2 className="h-4 w-4" />
-                  <span className="hidden sm:inline">Compartilhadas</span>
+                  <span className="hidden sm:inline">Todas</span>
                 </TabsTrigger>
               </TabsList>
 
@@ -503,6 +513,10 @@ export default function Knowledge() {
 
               <TabsContent value="code_generator" className="mt-6">
                 {renderMemoriesSection(codeGeneratorMemories, "code_generator")}
+              </TabsContent>
+
+              <TabsContent value="seo_specialist" className="mt-6">
+                {renderMemoriesSection(seoSpecialistMemories, "seo_specialist")}
               </TabsContent>
 
               <TabsContent value="all" className="mt-6">
@@ -548,53 +562,50 @@ export default function Knowledge() {
               <CardHeader>
                 <CardTitle className="flex items-center gap-2 text-base">
                   <Sparkles className="h-4 w-4 text-primary" />
-                  Pipeline Multi-Agent
+                  Pipeline 3 Agentes
                 </CardTitle>
               </CardHeader>
-              <CardContent className="space-y-4">
+              <CardContent className="space-y-3">
                 <div className="flex items-start gap-3">
                   <div className="p-2 bg-violet-500/10 rounded-lg shrink-0">
-                    <Palette className="h-5 w-5 text-violet-500" />
+                    <Palette className="h-4 w-4 text-violet-500" />
                   </div>
                   <div>
                     <h4 className="font-medium text-sm">1. Design Analyst</h4>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      Analisa briefing e imagens de referência para extrair
-                      especificações de cores, fontes e layout.
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      Cores, fontes e layout
                     </p>
                   </div>
                 </div>
 
                 <div className="flex justify-center">
-                  <ArrowRight className="h-4 w-4 text-muted-foreground" />
+                  <ArrowRight className="h-3 w-3 text-muted-foreground" />
                 </div>
 
                 <div className="flex items-start gap-3">
                   <div className="p-2 bg-cyan-500/10 rounded-lg shrink-0">
-                    <Code className="h-5 w-5 text-cyan-500" />
+                    <Code className="h-4 w-4 text-cyan-500" />
                   </div>
                   <div>
                     <h4 className="font-medium text-sm">2. Code Generator</h4>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      Gera HTML/CSS/JS seguindo exatamente as especificações do
-                      Design Analyst.
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      HTML, CSS e JavaScript
                     </p>
                   </div>
                 </div>
 
                 <div className="flex justify-center">
-                  <ArrowRight className="h-4 w-4 text-muted-foreground" />
+                  <ArrowRight className="h-3 w-3 text-muted-foreground" />
                 </div>
 
                 <div className="flex items-start gap-3">
-                  <div className="p-2 bg-emerald-500/10 rounded-lg shrink-0">
-                    <Share2 className="h-5 w-5 text-emerald-500" />
+                  <div className="p-2 bg-amber-500/10 rounded-lg shrink-0">
+                    <Search className="h-4 w-4 text-amber-500" />
                   </div>
                   <div>
-                    <h4 className="font-medium text-sm">Memórias Compartilhadas</h4>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      Templates, informações do negócio e instruções usadas por
-                      ambos os agentes.
+                    <h4 className="font-medium text-sm">3. SEO Specialist</h4>
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      Breadcrumbs, Schema.org, meta tags
                     </p>
                   </div>
                 </div>
@@ -611,19 +622,20 @@ export default function Knowledge() {
               </CardHeader>
               <CardContent className="space-y-3 text-sm text-muted-foreground">
                 <p>
-                  <strong className="text-foreground">Design Analyst:</strong>{" "}
-                  Adicione regras sobre paletas de cores, fontes por nicho, e
-                  análise de referências visuais.
+                  <strong className="text-foreground">Design:</strong>{" "}
+                  Paletas de cores, fontes e análise de referências visuais.
                 </p>
                 <p>
-                  <strong className="text-foreground">Code Generator:</strong>{" "}
-                  Configure regras de SEO, performance, animações CSS e
-                  estrutura de arquivos.
+                  <strong className="text-foreground">Code:</strong>{" "}
+                  Animações CSS, estrutura de arquivos e performance.
                 </p>
                 <p>
-                  <strong className="text-foreground">Compartilhadas:</strong>{" "}
-                  Use para templates de nicho, informações do negócio e
-                  instruções gerais.
+                  <strong className="text-foreground">SEO:</strong>{" "}
+                  Breadcrumbs, Schema.org, meta tags e estrutura semântica.
+                </p>
+                <p>
+                  <strong className="text-foreground">Todas:</strong>{" "}
+                  Templates de nicho e informações do negócio.
                 </p>
               </CardContent>
             </Card>

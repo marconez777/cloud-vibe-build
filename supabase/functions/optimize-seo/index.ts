@@ -284,7 +284,8 @@ Return ALL files with SEO optimizations applied.`;
           { role: "user", content: userMessage },
         ],
         temperature: 0.3,
-        max_tokens: 16384,
+        max_tokens: 32768,
+        response_format: { type: "json_object" },
       }),
     });
 
@@ -302,30 +303,31 @@ Return ALL files with SEO optimizations applied.`;
     }
 
     const data = await response.json();
-    const content = data.choices?.[0]?.message?.content;
+    const choice = data.choices?.[0];
+    const content = choice?.message?.content;
+    const finishReason = choice?.finish_reason;
+
+    console.log("Finish reason:", finishReason);
+    console.log("Content length:", content?.length);
 
     if (!content) {
       throw new Error("No content in SEO response");
     }
 
+    if (finishReason === "length") {
+      console.error("WARNING: SEO response was truncated!");
+    }
+
     console.log("SEO Specialist response received, length:", content.length);
 
-    // Parse the JSON response
+    // Parse JSON (response_format guarantees valid JSON)
     let optimizedFiles;
     try {
-      const jsonMatch = content.match(/```(?:json)?\s*([\s\S]*?)```/);
-      const jsonStr = jsonMatch ? jsonMatch[1].trim() : content.trim();
-      optimizedFiles = JSON.parse(jsonStr);
+      optimizedFiles = JSON.parse(content);
     } catch (e) {
       console.error("JSON parse error:", e);
-      const jsonStart = content.indexOf("{");
-      const jsonEnd = content.lastIndexOf("}");
-      if (jsonStart !== -1 && jsonEnd !== -1) {
-        const jsonStr = content.substring(jsonStart, jsonEnd + 1);
-        optimizedFiles = JSON.parse(jsonStr);
-      } else {
-        throw new Error("Failed to parse SEO response");
-      }
+      console.error("Raw content preview:", content.substring(0, 500));
+      throw new Error(`Failed to parse SEO response. finish_reason: ${finishReason}`);
     }
 
     console.log("=== SEO SPECIALIST COMPLETE ===");

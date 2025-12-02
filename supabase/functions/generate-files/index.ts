@@ -458,7 +458,8 @@ serve(async (req) => {
         model: "gpt-4o",
         messages,
         temperature: 0.5,
-        max_tokens: 16384,
+        max_tokens: 32768,
+        response_format: { type: "json_object" },
       }),
     });
 
@@ -476,62 +477,32 @@ serve(async (req) => {
     }
 
     const data = await response.json();
-    const content = data.choices?.[0]?.message?.content;
+    const choice = data.choices?.[0];
+    const content = choice?.message?.content;
+    const finishReason = choice?.finish_reason;
+
+    console.log("Finish reason:", finishReason);
+    console.log("Content length:", content?.length);
 
     if (!content) {
       throw new Error("No content in AI response");
     }
 
+    // Check for truncation
+    if (finishReason === "length") {
+      console.error("WARNING: Response was truncated due to token limit!");
+    }
+
     console.log("Code Generator response received, length:", content.length);
 
-    // Parse the JSON response with improved handling
+    // Parse JSON (response_format guarantees valid JSON)
     let filesData;
     try {
-      // Try multiple parsing strategies
-      let jsonStr = content;
-      
-      // Strategy 1: Remove markdown code blocks if present
-      const jsonMatch = content.match(/```(?:json)?\s*([\s\S]*?)```/);
-      if (jsonMatch) {
-        jsonStr = jsonMatch[1].trim();
-      }
-      
-      // Strategy 2: If still wrapped in backticks, try finding raw JSON
-      if (jsonStr.startsWith('`') || jsonStr.includes('```')) {
-        const jsonStart = content.indexOf('{"files"');
-        if (jsonStart === -1) {
-          const altStart = content.indexOf('{');
-          const jsonEnd = content.lastIndexOf('}');
-          if (altStart !== -1 && jsonEnd !== -1 && jsonEnd > altStart) {
-            jsonStr = content.substring(altStart, jsonEnd + 1);
-          }
-        } else {
-          const jsonEnd = content.lastIndexOf('}');
-          jsonStr = content.substring(jsonStart, jsonEnd + 1);
-        }
-      }
-      
-      filesData = JSON.parse(jsonStr);
+      filesData = JSON.parse(content);
     } catch (e) {
-      console.error("JSON parse error (first attempt):", e);
-      
-      // Fallback: Find the JSON object boundaries more carefully
-      try {
-        const jsonStart = content.indexOf('{"files"');
-        const startIdx = jsonStart !== -1 ? jsonStart : content.indexOf('{');
-        const jsonEnd = content.lastIndexOf('}');
-        
-        if (startIdx !== -1 && jsonEnd !== -1 && jsonEnd > startIdx) {
-          const jsonStr = content.substring(startIdx, jsonEnd + 1);
-          filesData = JSON.parse(jsonStr);
-        } else {
-          throw new Error("Could not find valid JSON boundaries");
-        }
-      } catch (e2) {
-        console.error("JSON parse error (fallback):", e2);
-        console.error("Raw content preview:", content.substring(0, 500));
-        throw new Error("Could not parse AI response as JSON. The AI may have returned invalid or truncated content.");
-      }
+      console.error("JSON parse error:", e);
+      console.error("Raw content preview:", content.substring(0, 1000));
+      throw new Error(`Could not parse AI response as JSON. finish_reason: ${finishReason}`);
     }
 
     if (!filesData.files || !Array.isArray(filesData.files)) {

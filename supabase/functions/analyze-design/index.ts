@@ -232,6 +232,7 @@ serve(async (req) => {
         messages,
         temperature: 0.3,
         max_tokens: 4096,
+        response_format: { type: "json_object" },
       }),
     });
 
@@ -249,32 +250,31 @@ serve(async (req) => {
     }
 
     const data = await response.json();
-    const content = data.choices?.[0]?.message?.content;
+    const choice = data.choices?.[0];
+    const content = choice?.message?.content;
+    const finishReason = choice?.finish_reason;
+
+    console.log("Finish reason:", finishReason);
+    console.log("Content length:", content?.length);
 
     if (!content) {
       throw new Error("No content in AI response");
     }
 
+    if (finishReason === "length") {
+      console.error("WARNING: Design analysis was truncated!");
+    }
+
     console.log("Design analysis received, parsing...");
 
-    // Parse the JSON response
+    // Parse JSON (response_format guarantees valid JSON)
     let designSpecs;
     try {
-      // Try to extract JSON from markdown code blocks if present
-      const jsonMatch = content.match(/```(?:json)?\s*([\s\S]*?)```/);
-      const jsonStr = jsonMatch ? jsonMatch[1].trim() : content.trim();
-      designSpecs = JSON.parse(jsonStr);
+      designSpecs = JSON.parse(content);
     } catch (e) {
       console.error("JSON parse error:", e);
-      // Try to find JSON object directly
-      const jsonStart = content.indexOf("{");
-      const jsonEnd = content.lastIndexOf("}");
-      if (jsonStart !== -1 && jsonEnd !== -1) {
-        const jsonStr = content.substring(jsonStart, jsonEnd + 1);
-        designSpecs = JSON.parse(jsonStr);
-      } else {
-        throw new Error("Could not parse design specs as JSON");
-      }
+      console.error("Raw content preview:", content.substring(0, 500));
+      throw new Error(`Could not parse design specs as JSON. finish_reason: ${finishReason}`);
     }
 
     console.log("Design specs extracted successfully");

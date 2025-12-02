@@ -73,7 +73,7 @@ ${html.replace(/<html[^>]*>|<\/html>|<head>[\s\S]*?<\/head>|<!DOCTYPE[^>]*>/gi, 
   return (
     <iframe
       srcDoc={compiledHtml}
-      className="h-full w-full border-0"
+      className="block h-full w-full border-0"
       title="Preview"
       sandbox="allow-scripts"
     />

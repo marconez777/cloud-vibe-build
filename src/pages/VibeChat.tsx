@@ -13,6 +13,7 @@ import {
   Bot,
   User,
   RefreshCw,
+  Download,
 } from "lucide-react";
 import { useProject, useUpdateProject } from "@/hooks/useProjects";
 import { LayoutRenderer } from "@/components/preview/LayoutRenderer";
@@ -158,6 +159,41 @@ export default function VibeChat() {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
       handleSend();
+    }
+  };
+
+  const handleExport = async () => {
+    if (!currentLayout) return;
+
+    try {
+      toast.info("Gerando arquivo HTML...");
+      
+      const { data, error } = await supabase.functions.invoke("export-layout", {
+        body: {
+          layoutTree: currentLayout,
+          projectName: project?.name,
+        },
+      });
+
+      if (error) throw error;
+
+      if (data.html && data.filename) {
+        // Create and download the file
+        const blob = new Blob([data.html], { type: "text/html" });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = data.filename;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        
+        toast.success("Arquivo HTML exportado com sucesso!");
+      }
+    } catch (error) {
+      console.error("Export error:", error);
+      toast.error("Erro ao exportar layout");
     }
   };
 
@@ -317,8 +353,26 @@ export default function VibeChat() {
         </div>
 
         {/* Preview Panel */}
-        <div className="flex-1 overflow-hidden bg-muted/30 p-4">
-          <div className="h-full overflow-auto rounded-lg border border-border bg-white shadow-lg">
+        <div className="flex flex-1 flex-col overflow-hidden bg-muted/30 p-4">
+          {/* Preview Header */}
+          {currentLayout && (
+            <div className="mb-3 flex items-center justify-between">
+              <h3 className="font-heading text-sm font-semibold text-muted-foreground">
+                Preview
+              </h3>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleExport}
+                className="gap-2"
+              >
+                <Download className="h-4 w-4" />
+                Exportar HTML
+              </Button>
+            </div>
+          )}
+          
+          <div className="flex-1 overflow-auto rounded-lg border border-border bg-white shadow-lg">
             {currentLayout ? (
               <LayoutRenderer layoutTree={currentLayout} />
             ) : (

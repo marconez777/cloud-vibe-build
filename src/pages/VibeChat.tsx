@@ -4,6 +4,7 @@ import { AppLayout } from "@/components/layout/AppLayout";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   ArrowLeft,
   Send,
@@ -14,10 +15,14 @@ import {
   User,
   RefreshCw,
   Download,
+  Code,
+  FolderTree,
 } from "lucide-react";
-import { useProject, useUpdateProject } from "@/hooks/useProjects";
-import { LayoutRenderer } from "@/components/preview/LayoutRenderer";
-import type { LayoutTree, ChatMessage } from "@/types/layout-tree";
+import { useProject } from "@/hooks/useProjects";
+import { useProjectFiles, useDeleteProjectFiles } from "@/hooks/useProjectFiles";
+import { FileExplorer } from "@/components/file-explorer/FileExplorer";
+import { FilePreview } from "@/components/file-explorer/FilePreview";
+import type { ChatMessage } from "@/types/layout-tree";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -26,32 +31,43 @@ import { useQueryClient } from "@tanstack/react-query";
 export default function VibeChat() {
   const { projectId } = useParams<{ projectId: string }>();
   const { data: project, isLoading } = useProject(projectId);
-  const updateProject = useUpdateProject();
+  const { data: files, refetch: refetchFiles } = useProjectFiles(projectId);
+  const deleteFiles = useDeleteProjectFiles();
   const queryClient = useQueryClient();
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState("");
   const [isGenerating, setIsGenerating] = useState(false);
+  const [activeTab, setActiveTab] = useState<"preview" | "files">("preview");
   const scrollRef = useRef<HTMLDivElement>(null);
-  const [currentLayout, setCurrentLayout] = useState<LayoutTree | null>(null);
 
-  // Initialize messages and layout when project loads
+  const hasFiles = files && files.length > 0;
+
+  // Initialize messages when project loads
   useEffect(() => {
-    if (project) {
-      setCurrentLayout(project.layout_tree as unknown as LayoutTree | null);
-      
-      if (messages.length === 0) {
-        const initialMessage: ChatMessage = {
-          id: "1",
-          role: "assistant",
-          content: project.layout_tree
-            ? "Layout carregado! Agora você pode editar via chat:\n\n• \"mude a cor primária para azul\"\n• \"adicione mais um feature\"\n• \"altere o título do hero para X\"\n• \"remova a seção de FAQ\"\n• \"adicione uma seção de depoimentos\""
-            : `Olá! Vou criar o layout para "${project.name}". ${project.description ? `\n\nBriefing: ${project.description}\n\nClique em "Gerar Layout" para começar ou descreva alterações no briefing.` : "Descreva como você quer que o site seja."}`,
-          timestamp: new Date(),
-        };
-        setMessages([initialMessage]);
-      }
+    if (project && messages.length === 0) {
+      const initialMessage: ChatMessage = {
+        id: "1",
+        role: "assistant",
+        content: hasFiles
+          ? "Arquivos carregados! Você pode:\n\n• \"mude a cor primária para azul\"\n• \"adicione um menu dropdown no header\"\n• \"altere o título principal para X\"\n• \"adicione uma seção de depoimentos\"\n• \"torne o site mais moderno\""
+          : `Olá! Vou criar os arquivos do site para "${project.name}". ${project.description ? `\n\nBriefing: ${project.description}\n\nClique em "Gerar Site" para começar.` : "Descreva como você quer que o site seja e clique em Gerar."}`,
+        timestamp: new Date(),
+      };
+      setMessages([initialMessage]);
     }
-  }, [project]);
+  }, [project, hasFiles]);
+
+  // Update initial message when files load
+  useEffect(() => {
+    if (hasFiles && messages.length === 1 && messages[0].id === "1") {
+      setMessages([{
+        id: "1",
+        role: "assistant",
+        content: "Arquivos carregados! Você pode editar via chat:\n\n• \"mude a cor primária para azul\"\n• \"adicione um menu dropdown no header\"\n• \"altere o título principal para X\"\n• \"adicione uma seção de depoimentos\"",
+        timestamp: new Date(),
+      }]);
+    }
+  }, [hasFiles]);
 
   useEffect(() => {
     if (scrollRef.current) {
@@ -59,15 +75,12 @@ export default function VibeChat() {
     }
   }, [messages]);
 
-  const generateLayout = async (userMessage?: string) => {
+  const generateFiles = async (userMessage?: string) => {
     if (isGenerating) return;
 
     setIsGenerating(true);
-    
-    // Determine if this is an edit or a new generation
-    const isEditMode = !!currentLayout && !!userMessage;
+    const isEditMode = hasFiles && !!userMessage;
 
-    // Add user message if provided
     if (userMessage) {
       const userMsg: ChatMessage = {
         id: Date.now().toString(),
@@ -78,67 +91,61 @@ export default function VibeChat() {
       setMessages((prev) => [...prev, userMsg]);
     }
 
-    // Add thinking message
     const thinkingMsg: ChatMessage = {
       id: `thinking-${Date.now()}`,
       role: "assistant",
-      content: isEditMode ? "Aplicando modificações..." : "Gerando layout com IA...",
+      content: isEditMode ? "Modificando arquivos..." : "Gerando arquivos do site...",
       timestamp: new Date(),
     };
     setMessages((prev) => [...prev, thinkingMsg]);
 
     try {
-      const { data, error } = await supabase.functions.invoke("generate-layout", {
+      const currentFiles = files?.map((f) => ({
+        path: f.file_path,
+        name: f.file_name,
+        type: f.file_type,
+        content: f.content,
+      }));
+
+      const { data, error } = await supabase.functions.invoke("generate-files", {
         body: {
           projectId,
           briefing: project?.description || userMessage,
-          currentLayout: isEditMode ? currentLayout : undefined,
+          currentFiles: isEditMode ? currentFiles : undefined,
           editMode: isEditMode,
-          messages: userMessage
-            ? [{ role: "user", content: userMessage }]
-            : undefined,
+          userMessage: userMessage,
         },
       });
 
       if (error) throw error;
 
-      // Remove thinking message
       setMessages((prev) => prev.filter((m) => !m.id.startsWith("thinking")));
 
-      if (data.layoutTree) {
-        setCurrentLayout(data.layoutTree);
-        
-        // Invalidate project query to refresh data
+      if (data.success) {
+        await refetchFiles();
         queryClient.invalidateQueries({ queryKey: ["project", projectId] });
-        queryClient.invalidateQueries({ queryKey: ["projects"] });
 
         const successMsg: ChatMessage = {
           id: Date.now().toString(),
           role: "assistant",
-          content: isEditMode 
-            ? "Modificações aplicadas! O preview foi atualizado. Continue pedindo alterações ou digite comandos como:\n\n• \"mude a cor primária para azul\"\n• \"adicione mais um depoimento\"\n• \"remova a seção de FAQ\"\n• \"altere o título do hero\""
-            : "Layout gerado com sucesso! O preview está atualizado à direita. Você pode pedir alterações a qualquer momento.",
+          content: isEditMode
+            ? `${data.files?.length || 0} arquivo(s) atualizado(s)! Veja o preview ou explore os arquivos na aba "Arquivos".`
+            : `Site gerado com ${data.files?.length || 0} arquivo(s)!\n\n📁 Estrutura:\n• index.html\n• css/ (estilos)\n• components/ (header, footer)\n• js/ (scripts)\n\nExplore os arquivos ou continue editando via chat.`,
           timestamp: new Date(),
         };
         setMessages((prev) => [...prev, successMsg]);
-        toast.success(isEditMode ? "Layout modificado!" : "Layout gerado com sucesso!");
+        toast.success(isEditMode ? "Arquivos atualizados!" : "Site gerado com sucesso!");
       } else {
-        const responseMsg: ChatMessage = {
-          id: Date.now().toString(),
-          role: "assistant",
-          content: data.message || "Não consegui processar sua solicitação. Por favor, tente novamente com mais detalhes.",
-          timestamp: new Date(),
-        };
-        setMessages((prev) => [...prev, responseMsg]);
+        throw new Error(data.error || "Erro desconhecido");
       }
     } catch (error) {
-      console.error("Error generating layout:", error);
+      console.error("Error generating files:", error);
       setMessages((prev) => prev.filter((m) => !m.id.startsWith("thinking")));
-      
+
       const errorMsg: ChatMessage = {
         id: Date.now().toString(),
         role: "assistant",
-        content: "Ocorreu um erro ao processar sua solicitação. Por favor, tente novamente.",
+        content: "Ocorreu um erro ao processar. Por favor, tente novamente.",
         timestamp: new Date(),
       };
       setMessages((prev) => [...prev, errorMsg]);
@@ -152,7 +159,7 @@ export default function VibeChat() {
     if (!input.trim() || isGenerating) return;
     const message = input.trim();
     setInput("");
-    await generateLayout(message);
+    await generateFiles(message);
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -162,24 +169,32 @@ export default function VibeChat() {
     }
   };
 
-  const handleExport = async () => {
-    if (!currentLayout) return;
+  const handleExportZip = async () => {
+    if (!hasFiles) return;
 
     try {
-      toast.info("Gerando arquivo HTML...");
-      
-      const { data, error } = await supabase.functions.invoke("export-layout", {
+      toast.info("Gerando arquivo ZIP...");
+
+      const { data, error } = await supabase.functions.invoke("export-zip", {
         body: {
-          layoutTree: currentLayout,
+          projectId,
           projectName: project?.name,
         },
       });
 
       if (error) throw error;
 
-      if (data.html && data.filename) {
-        // Create and download the file
-        const blob = new Blob([data.html], { type: "text/html" });
+      if (data.success && data.zipData) {
+        // Convert base64 to blob
+        const byteCharacters = atob(data.zipData);
+        const byteNumbers = new Array(byteCharacters.length);
+        for (let i = 0; i < byteCharacters.length; i++) {
+          byteNumbers[i] = byteCharacters.charCodeAt(i);
+        }
+        const byteArray = new Uint8Array(byteNumbers);
+        const blob = new Blob([byteArray], { type: "application/zip" });
+
+        // Download
         const url = URL.createObjectURL(blob);
         const a = document.createElement("a");
         a.href = url;
@@ -188,12 +203,12 @@ export default function VibeChat() {
         a.click();
         document.body.removeChild(a);
         URL.revokeObjectURL(url);
-        
-        toast.success("Arquivo HTML exportado com sucesso!");
+
+        toast.success("ZIP exportado com sucesso!");
       }
     } catch (error) {
       console.error("Export error:", error);
-      toast.error("Erro ao exportar layout");
+      toast.error("Erro ao exportar ZIP");
     }
   };
 
@@ -227,7 +242,7 @@ export default function VibeChat() {
     <AppLayout>
       <div className="flex h-full">
         {/* Chat Panel */}
-        <div className="flex w-[400px] flex-col border-r border-border bg-background">
+        <div className="flex w-[350px] flex-col border-r border-border bg-background">
           {/* Header */}
           <div className="flex items-center gap-3 border-b border-border px-4 py-3">
             <Link to={`/preview/${projectId}`}>
@@ -247,12 +262,12 @@ export default function VibeChat() {
           </div>
 
           {/* Generate Button */}
-          {!currentLayout && (
+          {!hasFiles && (
             <div className="border-b border-border p-4">
               <Button
                 variant="hero"
                 className="w-full"
-                onClick={() => generateLayout()}
+                onClick={() => generateFiles()}
                 disabled={isGenerating}
               >
                 {isGenerating ? (
@@ -263,7 +278,7 @@ export default function VibeChat() {
                 ) : (
                   <>
                     <Sparkles className="mr-2 h-4 w-4" />
-                    Gerar Layout com IA
+                    Gerar Site com IA
                   </>
                 )}
               </Button>
@@ -297,7 +312,7 @@ export default function VibeChat() {
                   </div>
                   <div
                     className={cn(
-                      "max-w-[80%] rounded-xl px-4 py-2",
+                      "max-w-[85%] rounded-xl px-4 py-2",
                       message.role === "assistant"
                         ? "bg-muted/50"
                         : "bg-primary text-primary-foreground",
@@ -313,24 +328,22 @@ export default function VibeChat() {
 
           {/* Input */}
           <div className="border-t border-border p-4">
-            <div className="flex gap-2">
-              <Textarea
-                placeholder="Descreva as mudanças que deseja..."
-                className="min-h-[80px] resize-none"
-                value={input}
-                onChange={(e) => setInput(e.target.value)}
-                onKeyDown={handleKeyDown}
-              />
-            </div>
+            <Textarea
+              placeholder="Descreva as mudanças..."
+              className="min-h-[60px] resize-none text-sm"
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              onKeyDown={handleKeyDown}
+            />
             <div className="mt-2 flex justify-between">
-              {currentLayout && (
+              {hasFiles && (
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={() => generateLayout()}
+                  onClick={() => generateFiles()}
                   disabled={isGenerating}
                 >
-                  <RefreshCw className="mr-2 h-4 w-4" />
+                  <RefreshCw className="mr-2 h-3 w-3" />
                   Regenerar
                 </Button>
               )}
@@ -342,9 +355,9 @@ export default function VibeChat() {
                 className="ml-auto"
               >
                 {isGenerating ? (
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  <Loader2 className="mr-2 h-3 w-3 animate-spin" />
                 ) : (
-                  <Send className="mr-2 h-4 w-4" />
+                  <Send className="mr-2 h-3 w-3" />
                 )}
                 Enviar
               </Button>
@@ -352,42 +365,68 @@ export default function VibeChat() {
           </div>
         </div>
 
-        {/* Preview Panel */}
-        <div className="flex flex-1 flex-col overflow-hidden bg-muted/30 p-4">
-          {/* Preview Header */}
-          {currentLayout && (
-            <div className="mb-3 flex items-center justify-between">
-              <h3 className="font-heading text-sm font-semibold text-muted-foreground">
-                Preview
-              </h3>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleExport}
-                className="gap-2"
-              >
+        {/* Right Panel - Preview & Files */}
+        <div className="flex flex-1 flex-col overflow-hidden">
+          {/* Tabs Header */}
+          <div className="flex items-center justify-between border-b border-border bg-background px-4 py-2">
+            <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as "preview" | "files")}>
+              <TabsList>
+                <TabsTrigger value="preview" className="gap-2">
+                  <Eye className="h-4 w-4" />
+                  Preview
+                </TabsTrigger>
+                <TabsTrigger value="files" className="gap-2">
+                  <FolderTree className="h-4 w-4" />
+                  Arquivos
+                </TabsTrigger>
+              </TabsList>
+            </Tabs>
+
+            {hasFiles && (
+              <Button variant="outline" size="sm" onClick={handleExportZip} className="gap-2">
                 <Download className="h-4 w-4" />
-                Exportar HTML
+                Exportar ZIP
               </Button>
-            </div>
-          )}
-          
-          <div className="flex-1 overflow-auto rounded-lg border border-border bg-white shadow-lg">
-            {currentLayout ? (
-              <LayoutRenderer layoutTree={currentLayout} />
+            )}
+          </div>
+
+          {/* Content */}
+          <div className="flex-1 overflow-hidden bg-muted/30 p-4">
+            {activeTab === "preview" ? (
+              <div className="h-full rounded-lg border border-border bg-white shadow-lg overflow-hidden">
+                {hasFiles ? (
+                  <FilePreview files={files} />
+                ) : (
+                  <div className="flex h-full flex-col items-center justify-center gap-4 p-8 text-center">
+                    <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-primary/10">
+                      <Eye className="h-8 w-8 text-primary" />
+                    </div>
+                    <div>
+                      <h3 className="font-heading font-semibold">Preview aparecerá aqui</h3>
+                      <p className="mt-1 text-sm text-muted-foreground">
+                        Clique em "Gerar Site com IA" para criar os arquivos
+                      </p>
+                    </div>
+                  </div>
+                )}
+              </div>
             ) : (
-              <div className="flex h-full flex-col items-center justify-center gap-4 p-8 text-center">
-                <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-primary/10">
-                  <Eye className="h-8 w-8 text-primary" />
-                </div>
-                <div>
-                  <h3 className="font-heading font-semibold">
-                    Preview aparecerá aqui
-                  </h3>
-                  <p className="mt-1 text-sm text-muted-foreground">
-                    Clique em "Gerar Layout com IA" para criar o site
-                  </p>
-                </div>
+              <div className="h-full rounded-lg border border-border bg-background shadow-lg overflow-hidden">
+                {hasFiles ? (
+                  <FileExplorer projectId={projectId!} />
+                ) : (
+                  <div className="flex h-full flex-col items-center justify-center gap-4 p-8 text-center">
+                    <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-primary/10">
+                      <Code className="h-8 w-8 text-primary" />
+                    </div>
+                    <div>
+                      <h3 className="font-heading font-semibold">Arquivos aparecerão aqui</h3>
+                      <p className="mt-1 text-sm text-muted-foreground">
+                        Gere o site para ver a estrutura de arquivos
+                      </p>
+                    </div>
+                  </div>
+                )}
               </div>
             )}
           </div>

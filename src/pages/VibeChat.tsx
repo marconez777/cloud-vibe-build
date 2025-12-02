@@ -6,13 +6,10 @@ import { Textarea } from "@/components/ui/textarea";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
-  ArrowLeft,
   Send,
   Loader2,
   Eye,
   Sparkles,
-  Bot,
-  User,
   RefreshCw,
   Download,
   Code,
@@ -20,50 +17,79 @@ import {
 } from "lucide-react";
 import { useProject } from "@/hooks/useProjects";
 import { useProjectFiles, useDeleteProjectFiles } from "@/hooks/useProjectFiles";
+import { useChatMessages, useSaveChatMessage, useClearChatHistory } from "@/hooks/useChatMessages";
 import { FileExplorer } from "@/components/file-explorer/FileExplorer";
 import { FilePreview } from "@/components/file-explorer/FilePreview";
-import type { ChatMessage } from "@/types/layout-tree";
+import { ChatHeader } from "@/components/chat/ChatHeader";
+import { MessageBubble } from "@/components/chat/MessageBubble";
+import { QuickSuggestions } from "@/components/chat/QuickSuggestions";
+import { GenerationProgress } from "@/components/chat/GenerationProgress";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useQueryClient } from "@tanstack/react-query";
 
+interface LocalMessage {
+  id: string;
+  role: "user" | "assistant";
+  content: string;
+  timestamp: Date;
+  isThinking?: boolean;
+}
+
 export default function VibeChat() {
   const { projectId } = useParams<{ projectId: string }>();
   const { data: project, isLoading } = useProject(projectId);
   const { data: files, refetch: refetchFiles } = useProjectFiles(projectId);
-  const deleteFiles = useDeleteProjectFiles();
+  const { data: savedMessages, isLoading: messagesLoading } = useChatMessages(projectId);
+  const saveMessage = useSaveChatMessage();
+  const clearHistory = useClearChatHistory();
   const queryClient = useQueryClient();
-  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  
+  const [localMessages, setLocalMessages] = useState<LocalMessage[]>([]);
   const [input, setInput] = useState("");
   const [isGenerating, setIsGenerating] = useState(false);
   const [activeTab, setActiveTab] = useState<"preview" | "files">("preview");
   const scrollRef = useRef<HTMLDivElement>(null);
+  const [initialized, setInitialized] = useState(false);
 
   const hasFiles = files && files.length > 0;
 
-  // Initialize messages when project loads
+  // Initialize messages from database
   useEffect(() => {
-    if (project && messages.length === 0) {
-      const initialMessage: ChatMessage = {
-        id: "1",
-        role: "assistant",
-        content: hasFiles
-          ? "Arquivos carregados! Você pode:\n\n• \"mude a cor primária para azul\"\n• \"adicione um menu dropdown no header\"\n• \"altere o título principal para X\"\n• \"adicione uma seção de depoimentos\"\n• \"torne o site mais moderno\""
-          : `Olá! Vou criar os arquivos do site para "${project.name}". ${project.description ? `\n\nBriefing: ${project.description}\n\nClique em "Gerar Site" para começar.` : "Descreva como você quer que o site seja e clique em Gerar."}`,
-        timestamp: new Date(),
-      };
-      setMessages([initialMessage]);
+    if (!messagesLoading && savedMessages && !initialized) {
+      if (savedMessages.length > 0) {
+        setLocalMessages(
+          savedMessages.map((m) => ({
+            id: m.id,
+            role: m.role as "user" | "assistant",
+            content: m.content,
+            timestamp: new Date(m.created_at),
+          }))
+        );
+      } else if (project) {
+        // Add welcome message
+        const welcomeMsg: LocalMessage = {
+          id: "welcome",
+          role: "assistant",
+          content: hasFiles
+            ? "Arquivos carregados! Você pode editar via chat:\n\n• \"mude a cor primária para azul\"\n• \"adicione um formulário de contato\"\n• \"inclua uma seção de depoimentos\""
+            : `Olá! Vou criar os arquivos do site para "${project.name}". ${project.description ? `\n\nBriefing: ${project.description}\n\nClique em "Gerar Site" ou descreva o que você quer.` : "Descreva como você quer que o site seja."}`,
+          timestamp: new Date(),
+        };
+        setLocalMessages([welcomeMsg]);
+      }
+      setInitialized(true);
     }
-  }, [project, hasFiles]);
+  }, [savedMessages, messagesLoading, project, hasFiles, initialized]);
 
-  // Update initial message when files load
+  // Update welcome message when files load
   useEffect(() => {
-    if (hasFiles && messages.length === 1 && messages[0].id === "1") {
-      setMessages([{
-        id: "1",
+    if (hasFiles && localMessages.length === 1 && localMessages[0].id === "welcome") {
+      setLocalMessages([{
+        id: "welcome",
         role: "assistant",
-        content: "Arquivos carregados! Você pode editar via chat:\n\n• \"mude a cor primária para azul\"\n• \"adicione um menu dropdown no header\"\n• \"altere o título principal para X\"\n• \"adicione uma seção de depoimentos\"",
+        content: "Arquivos carregados! Você pode editar via chat:\n\n• \"mude a cor primária para azul\"\n• \"adicione um formulário de contato\"\n• \"inclua uma seção de depoimentos\"",
         timestamp: new Date(),
       }]);
     }
@@ -73,31 +99,51 @@ export default function VibeChat() {
     if (scrollRef.current) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
-  }, [messages]);
+  }, [localMessages]);
+
+  const handleClearHistory = async () => {
+    if (!projectId) return;
+    try {
+      await clearHistory.mutateAsync(projectId);
+      setLocalMessages([]);
+      setInitialized(false);
+      toast.success("Histórico limpo");
+    } catch {
+      toast.error("Erro ao limpar histórico");
+    }
+  };
 
   const generateFiles = async (userMessage?: string) => {
-    if (isGenerating) return;
+    if (isGenerating || !projectId) return;
 
     setIsGenerating(true);
     const isEditMode = hasFiles && !!userMessage;
 
     if (userMessage) {
-      const userMsg: ChatMessage = {
-        id: Date.now().toString(),
+      const userMsg: LocalMessage = {
+        id: `user-${Date.now()}`,
         role: "user",
         content: userMessage,
         timestamp: new Date(),
       };
-      setMessages((prev) => [...prev, userMsg]);
+      setLocalMessages((prev) => [...prev, userMsg]);
+      
+      // Save user message to database
+      saveMessage.mutate({
+        projectId,
+        role: "user",
+        content: userMessage,
+      });
     }
 
-    const thinkingMsg: ChatMessage = {
+    const thinkingMsg: LocalMessage = {
       id: `thinking-${Date.now()}`,
       role: "assistant",
       content: isEditMode ? "Modificando arquivos..." : "Gerando arquivos do site...",
       timestamp: new Date(),
+      isThinking: true,
     };
-    setMessages((prev) => [...prev, thinkingMsg]);
+    setLocalMessages((prev) => [...prev, thinkingMsg]);
 
     try {
       const currentFiles = files?.map((f) => ({
@@ -119,36 +165,47 @@ export default function VibeChat() {
 
       if (error) throw error;
 
-      setMessages((prev) => prev.filter((m) => !m.id.startsWith("thinking")));
+      setLocalMessages((prev) => prev.filter((m) => !m.id.startsWith("thinking")));
 
       if (data.success) {
         await refetchFiles();
         queryClient.invalidateQueries({ queryKey: ["project", projectId] });
 
-        const successMsg: ChatMessage = {
-          id: Date.now().toString(),
+        const successContent = isEditMode
+          ? `${data.files?.length || 0} arquivo(s) atualizado(s)! Veja o preview ou explore os arquivos.`
+          : `Site gerado com ${data.files?.length || 0} arquivo(s)!\n\n📁 Estrutura:\n• index.html\n• css/ (estilos)\n• components/ (header, footer)\n• js/ (scripts)\n\nExplore os arquivos ou continue editando via chat.`;
+
+        const successMsg: LocalMessage = {
+          id: `success-${Date.now()}`,
           role: "assistant",
-          content: isEditMode
-            ? `${data.files?.length || 0} arquivo(s) atualizado(s)! Veja o preview ou explore os arquivos na aba "Arquivos".`
-            : `Site gerado com ${data.files?.length || 0} arquivo(s)!\n\n📁 Estrutura:\n• index.html\n• css/ (estilos)\n• components/ (header, footer)\n• js/ (scripts)\n\nExplore os arquivos ou continue editando via chat.`,
+          content: successContent,
           timestamp: new Date(),
         };
-        setMessages((prev) => [...prev, successMsg]);
+        setLocalMessages((prev) => [...prev, successMsg]);
+        
+        // Save assistant message to database
+        saveMessage.mutate({
+          projectId,
+          role: "assistant",
+          content: successContent,
+        });
+
         toast.success(isEditMode ? "Arquivos atualizados!" : "Site gerado com sucesso!");
       } else {
         throw new Error(data.error || "Erro desconhecido");
       }
     } catch (error) {
       console.error("Error generating files:", error);
-      setMessages((prev) => prev.filter((m) => !m.id.startsWith("thinking")));
+      setLocalMessages((prev) => prev.filter((m) => !m.id.startsWith("thinking")));
 
-      const errorMsg: ChatMessage = {
-        id: Date.now().toString(),
+      const errorContent = "Ocorreu um erro ao processar. Por favor, tente novamente.";
+      const errorMsg: LocalMessage = {
+        id: `error-${Date.now()}`,
         role: "assistant",
-        content: "Ocorreu um erro ao processar. Por favor, tente novamente.",
+        content: errorContent,
         timestamp: new Date(),
       };
-      setMessages((prev) => [...prev, errorMsg]);
+      setLocalMessages((prev) => [...prev, errorMsg]);
       toast.error("Erro ao processar");
     } finally {
       setIsGenerating(false);
@@ -169,6 +226,14 @@ export default function VibeChat() {
     }
   };
 
+  const handleSuggestionSelect = (suggestion: string) => {
+    if (hasFiles) {
+      generateFiles(suggestion);
+    } else {
+      setInput(suggestion);
+    }
+  };
+
   const handleExportZip = async () => {
     if (!hasFiles) return;
 
@@ -185,7 +250,6 @@ export default function VibeChat() {
       if (error) throw error;
 
       if (data.success && data.zipData) {
-        // Convert base64 to blob
         const byteCharacters = atob(data.zipData);
         const byteNumbers = new Array(byteCharacters.length);
         for (let i = 0; i < byteCharacters.length; i++) {
@@ -194,7 +258,6 @@ export default function VibeChat() {
         const byteArray = new Uint8Array(byteNumbers);
         const blob = new Blob([byteArray], { type: "application/zip" });
 
-        // Download
         const url = URL.createObjectURL(blob);
         const a = document.createElement("a");
         a.href = url;
@@ -212,7 +275,7 @@ export default function VibeChat() {
     }
   };
 
-  if (isLoading) {
+  if (isLoading || messagesLoading) {
     return (
       <AppLayout>
         <div className="flex h-full items-center justify-center">
@@ -228,10 +291,7 @@ export default function VibeChat() {
         <div className="flex h-full flex-col items-center justify-center gap-4">
           <p className="text-muted-foreground">Projeto não encontrado</p>
           <Link to="/projects">
-            <Button variant="outline">
-              <ArrowLeft className="mr-2 h-4 w-4" />
-              Voltar aos Projetos
-            </Button>
+            <Button variant="outline">Voltar aos Projetos</Button>
           </Link>
         </div>
       </AppLayout>
@@ -242,24 +302,14 @@ export default function VibeChat() {
     <AppLayout>
       <div className="flex h-full">
         {/* Chat Panel */}
-        <div className="flex w-[350px] flex-col border-r border-border bg-background">
-          {/* Header */}
-          <div className="flex items-center gap-3 border-b border-border px-4 py-3">
-            <Link to={`/preview/${projectId}`}>
-              <Button variant="ghost" size="icon">
-                <ArrowLeft className="h-4 w-4" />
-              </Button>
-            </Link>
-            <div className="flex items-center gap-2">
-              <div className="flex h-8 w-8 items-center justify-center rounded-lg gradient-primary">
-                <Sparkles className="h-4 w-4 text-primary-foreground" />
-              </div>
-              <div>
-                <h2 className="font-heading font-semibold text-sm">VibeChat</h2>
-                <p className="text-xs text-muted-foreground">{project.name}</p>
-              </div>
-            </div>
-          </div>
+        <div className="flex w-[380px] flex-col border-r border-border bg-background">
+          <ChatHeader
+            projectId={projectId!}
+            projectName={project.name}
+            isGenerating={isGenerating}
+            messageCount={localMessages.filter((m) => m.id !== "welcome").length}
+            onClearHistory={handleClearHistory}
+          />
 
           {/* Generate Button */}
           {!hasFiles && (
@@ -288,43 +338,30 @@ export default function VibeChat() {
           {/* Messages */}
           <ScrollArea className="flex-1 p-4" ref={scrollRef}>
             <div className="space-y-4">
-              {messages.map((message) => (
-                <div
+              {localMessages.map((message) => (
+                <MessageBubble
                   key={message.id}
-                  className={cn(
-                    "flex gap-3",
-                    message.role === "user" && "flex-row-reverse"
-                  )}
-                >
-                  <div
-                    className={cn(
-                      "flex h-8 w-8 shrink-0 items-center justify-center rounded-lg",
-                      message.role === "assistant"
-                        ? "bg-primary/10"
-                        : "bg-muted"
-                    )}
-                  >
-                    {message.role === "assistant" ? (
-                      <Bot className="h-4 w-4 text-primary" />
-                    ) : (
-                      <User className="h-4 w-4 text-muted-foreground" />
-                    )}
-                  </div>
-                  <div
-                    className={cn(
-                      "max-w-[85%] rounded-xl px-4 py-2",
-                      message.role === "assistant"
-                        ? "bg-muted/50"
-                        : "bg-primary text-primary-foreground",
-                      message.id.startsWith("thinking") && "animate-pulse"
-                    )}
-                  >
-                    <p className="text-sm whitespace-pre-wrap">{message.content}</p>
-                  </div>
-                </div>
+                  role={message.role}
+                  content={message.content}
+                  timestamp={message.timestamp}
+                  isThinking={message.isThinking}
+                />
               ))}
+              
+              {isGenerating && (
+                <GenerationProgress isGenerating={isGenerating} editMode={hasFiles} />
+              )}
             </div>
           </ScrollArea>
+
+          {/* Quick Suggestions */}
+          <div className="border-t border-border p-3">
+            <QuickSuggestions
+              hasFiles={hasFiles}
+              onSelect={handleSuggestionSelect}
+              disabled={isGenerating}
+            />
+          </div>
 
           {/* Input */}
           <div className="border-t border-border p-4">

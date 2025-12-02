@@ -8,6 +8,8 @@ export interface AIMemory {
   type: string;
   category: string;
   is_active: boolean;
+  is_system: boolean;
+  priority: number;
   created_at: string;
   updated_at: string;
 }
@@ -16,8 +18,8 @@ export const MEMORY_CATEGORIES = [
   { value: "general", label: "Geral" },
   { value: "branding", label: "Branding" },
   { value: "content", label: "Conteúdo" },
-  { value: "structure", label: "Estrutura" },
-  { value: "style", label: "Estilo" },
+  { value: "estrutura", label: "Estrutura" },
+  { value: "estilo", label: "Estilo" },
   { value: "business", label: "Negócio" },
 ] as const;
 
@@ -28,6 +30,40 @@ export function useAIMemories() {
       const { data, error } = await supabase
         .from("ai_memories")
         .select("*")
+        .order("priority", { ascending: false })
+        .order("created_at", { ascending: false });
+
+      if (error) throw error;
+      return data as AIMemory[];
+    },
+  });
+}
+
+export function useSystemMemories() {
+  return useQuery({
+    queryKey: ["ai-memories", "system"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("ai_memories")
+        .select("*")
+        .eq("is_system", true)
+        .order("priority", { ascending: false });
+
+      if (error) throw error;
+      return data as AIMemory[];
+    },
+  });
+}
+
+export function useUserMemories() {
+  return useQuery({
+    queryKey: ["ai-memories", "user"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("ai_memories")
+        .select("*")
+        .eq("is_system", false)
+        .order("priority", { ascending: false })
         .order("created_at", { ascending: false });
 
       if (error) throw error;
@@ -44,7 +80,7 @@ export function useActiveMemories() {
         .from("ai_memories")
         .select("*")
         .eq("is_active", true)
-        .order("created_at", { ascending: false });
+        .order("priority", { ascending: false });
 
       if (error) throw error;
       return data as AIMemory[];
@@ -61,15 +97,17 @@ export function useCreateMemory() {
       content,
       type = "instruction",
       category = "general",
+      priority = 0,
     }: {
       title: string;
       content: string;
       type?: string;
       category?: string;
+      priority?: number;
     }) => {
       const { data, error } = await supabase
         .from("ai_memories")
-        .insert({ title, content, type, category })
+        .insert({ title, content, type, category, priority, is_system: false })
         .select()
         .single();
 
@@ -136,7 +174,8 @@ export function useDeleteMemory() {
       const { error } = await supabase
         .from("ai_memories")
         .delete()
-        .eq("id", id);
+        .eq("id", id)
+        .eq("is_system", false); // Prevent deleting system memories
 
       if (error) throw error;
     },

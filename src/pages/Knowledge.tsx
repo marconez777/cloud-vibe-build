@@ -6,10 +6,17 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
+import { Badge } from "@/components/ui/badge";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
   Brain,
   Upload,
-  FileText,
   Trash2,
   Plus,
   Save,
@@ -17,6 +24,7 @@ import {
   Loader2,
   CheckCircle2,
   XCircle,
+  Filter,
 } from "lucide-react";
 import { toast } from "sonner";
 import {
@@ -24,6 +32,7 @@ import {
   useCreateMemory,
   useDeleteMemory,
   useToggleMemory,
+  MEMORY_CATEGORIES,
 } from "@/hooks/useAIMemories";
 import { DocumentUpload } from "@/components/DocumentUpload";
 
@@ -35,7 +44,9 @@ export default function Knowledge() {
 
   const [newTitle, setNewTitle] = useState("");
   const [newContent, setNewContent] = useState("");
+  const [newCategory, setNewCategory] = useState("general");
   const [showForm, setShowForm] = useState(false);
+  const [filterCategory, setFilterCategory] = useState<string>("all");
 
   const handleAddMemory = async () => {
     if (!newTitle.trim() || !newContent.trim()) {
@@ -48,14 +59,24 @@ export default function Knowledge() {
         title: newTitle,
         content: newContent,
         type: "instruction",
+        category: newCategory,
       });
       setNewTitle("");
       setNewContent("");
+      setNewCategory("general");
       setShowForm(false);
       toast.success("Memória adicionada!");
     } catch {
       toast.error("Erro ao adicionar memória");
     }
+  };
+
+  const filteredMemories = memories?.filter(
+    (m) => filterCategory === "all" || m.category === filterCategory
+  );
+
+  const getCategoryLabel = (category: string) => {
+    return MEMORY_CATEGORIES.find((c) => c.value === category)?.label || category;
   };
 
   const handleDeleteMemory = async (id: string) => {
@@ -130,6 +151,21 @@ export default function Knowledge() {
                       onChange={(e) => setNewContent(e.target.value)}
                     />
                   </div>
+                  <div className="space-y-2">
+                    <Label>Categoria</Label>
+                    <Select value={newCategory} onValueChange={setNewCategory}>
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {MEMORY_CATEGORIES.map((cat) => (
+                          <SelectItem key={cat.value} value={cat.value}>
+                            {cat.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
                   <div className="flex gap-2">
                     <Button
                       variant="hero"
@@ -167,6 +203,7 @@ export default function Knowledge() {
                         title: `Documento: ${doc.name}`,
                         content: doc.content || `Arquivo carregado: ${doc.url}`,
                         type: "document",
+                        category: "content",
                       });
                       toast.success(`Documento "${doc.name}" adicionado à base de conhecimento`);
                     } catch {
@@ -184,8 +221,26 @@ export default function Knowledge() {
               </div>
             ) : memories && memories.length > 0 ? (
               <div className="space-y-4">
-                <h3 className="font-heading font-semibold">Memórias Salvas</h3>
-                {memories.map((memory) => (
+                <div className="flex items-center justify-between">
+                  <h3 className="font-heading font-semibold">Memórias Salvas</h3>
+                  <div className="flex items-center gap-2">
+                    <Filter className="h-4 w-4 text-muted-foreground" />
+                    <Select value={filterCategory} onValueChange={setFilterCategory}>
+                      <SelectTrigger className="w-[140px]">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">Todas</SelectItem>
+                        {MEMORY_CATEGORIES.map((cat) => (
+                          <SelectItem key={cat.value} value={cat.value}>
+                            {cat.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+                {filteredMemories?.map((memory) => (
                   <Card
                     key={memory.id}
                     variant="glass"
@@ -194,8 +249,11 @@ export default function Knowledge() {
                     <CardContent className="p-4">
                       <div className="flex items-start justify-between gap-4">
                         <div className="flex-1">
-                          <div className="flex items-center gap-2">
+                          <div className="flex items-center gap-2 flex-wrap">
                             <h4 className="font-medium">{memory.title}</h4>
+                            <Badge variant="outline" className="text-xs">
+                              {getCategoryLabel(memory.category)}
+                            </Badge>
                             {memory.is_active ? (
                               <span className="flex items-center gap-1 text-xs text-green-500">
                                 <CheckCircle2 className="h-3 w-3" />

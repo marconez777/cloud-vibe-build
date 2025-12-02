@@ -8,6 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Sparkles, ArrowRight, Upload, Lightbulb } from "lucide-react";
 import { toast } from "sonner";
+import { useCreateProject } from "@/hooks/useProjects";
 
 const examples = [
   "Site para clínica odontológica com hero, serviços, depoimentos e contato. Cores azul e branco.",
@@ -19,7 +20,7 @@ export default function Briefing() {
   const navigate = useNavigate();
   const [name, setName] = useState("");
   const [briefing, setBriefing] = useState("");
-  const [isLoading, setIsLoading] = useState(false);
+  const createProject = useCreateProject();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -34,14 +35,19 @@ export default function Briefing() {
       return;
     }
 
-    setIsLoading(true);
-    
-    // For now, simulate and redirect to preview
-    // TODO: Integrate with Supabase when Cloud is enabled
-    toast.success("Projeto criado! Redirecionando...");
-    setTimeout(() => {
-      navigate("/projects");
-    }, 1500);
+    try {
+      const project = await createProject.mutateAsync({
+        name: name.trim(),
+        description: briefing.trim(),
+        status: "draft",
+      });
+      
+      toast.success("Projeto criado com sucesso!");
+      navigate(`/projects`);
+    } catch (error) {
+      console.error("Error creating project:", error);
+      toast.error("Erro ao criar projeto. Tente novamente.");
+    }
   };
 
   const useExample = (example: string) => {
@@ -116,12 +122,12 @@ export default function Briefing() {
                     variant="hero"
                     size="lg"
                     className="w-full"
-                    disabled={isLoading}
+                    disabled={createProject.isPending}
                   >
-                    {isLoading ? (
+                    {createProject.isPending ? (
                       <>
                         <div className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-primary-foreground border-t-transparent" />
-                        Gerando...
+                        Criando...
                       </>
                     ) : (
                       <>

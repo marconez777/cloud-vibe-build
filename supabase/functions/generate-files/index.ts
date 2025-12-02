@@ -458,7 +458,7 @@ serve(async (req) => {
         model: "gpt-4o",
         messages,
         temperature: 0.5,
-        max_tokens: 32768,
+        max_tokens: 16384,
         response_format: { type: "json_object" },
       }),
     });

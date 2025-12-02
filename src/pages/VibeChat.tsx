@@ -391,9 +391,9 @@ export default function VibeChat() {
           </div>
 
           {/* Content */}
-          <div className="flex-1 overflow-hidden bg-muted/30 p-4">
+          <div className="flex-1 min-h-0 overflow-hidden bg-muted/30 p-4">
             {activeTab === "preview" ? (
-              <div className="h-full rounded-lg border border-border bg-white shadow-lg overflow-hidden">
+              <div className="h-full rounded-lg border border-border bg-background shadow-lg overflow-hidden">
                 {hasFiles ? (
                   <FilePreview files={files} />
                 ) : (

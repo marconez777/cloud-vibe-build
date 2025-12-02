@@ -484,21 +484,53 @@ serve(async (req) => {
 
     console.log("Code Generator response received, length:", content.length);
 
-    // Parse the JSON response
+    // Parse the JSON response with improved handling
     let filesData;
     try {
+      // Try multiple parsing strategies
+      let jsonStr = content;
+      
+      // Strategy 1: Remove markdown code blocks if present
       const jsonMatch = content.match(/```(?:json)?\s*([\s\S]*?)```/);
-      const jsonStr = jsonMatch ? jsonMatch[1].trim() : content.trim();
+      if (jsonMatch) {
+        jsonStr = jsonMatch[1].trim();
+      }
+      
+      // Strategy 2: If still wrapped in backticks, try finding raw JSON
+      if (jsonStr.startsWith('`') || jsonStr.includes('```')) {
+        const jsonStart = content.indexOf('{"files"');
+        if (jsonStart === -1) {
+          const altStart = content.indexOf('{');
+          const jsonEnd = content.lastIndexOf('}');
+          if (altStart !== -1 && jsonEnd !== -1 && jsonEnd > altStart) {
+            jsonStr = content.substring(altStart, jsonEnd + 1);
+          }
+        } else {
+          const jsonEnd = content.lastIndexOf('}');
+          jsonStr = content.substring(jsonStart, jsonEnd + 1);
+        }
+      }
+      
       filesData = JSON.parse(jsonStr);
     } catch (e) {
-      console.error("JSON parse error:", e);
-      const jsonStart = content.indexOf("{");
-      const jsonEnd = content.lastIndexOf("}");
-      if (jsonStart !== -1 && jsonEnd !== -1) {
-        const jsonStr = content.substring(jsonStart, jsonEnd + 1);
-        filesData = JSON.parse(jsonStr);
-      } else {
-        throw new Error("Could not parse AI response as JSON");
+      console.error("JSON parse error (first attempt):", e);
+      
+      // Fallback: Find the JSON object boundaries more carefully
+      try {
+        const jsonStart = content.indexOf('{"files"');
+        const startIdx = jsonStart !== -1 ? jsonStart : content.indexOf('{');
+        const jsonEnd = content.lastIndexOf('}');
+        
+        if (startIdx !== -1 && jsonEnd !== -1 && jsonEnd > startIdx) {
+          const jsonStr = content.substring(startIdx, jsonEnd + 1);
+          filesData = JSON.parse(jsonStr);
+        } else {
+          throw new Error("Could not find valid JSON boundaries");
+        }
+      } catch (e2) {
+        console.error("JSON parse error (fallback):", e2);
+        console.error("Raw content preview:", content.substring(0, 500));
+        throw new Error("Could not parse AI response as JSON. The AI may have returned invalid or truncated content.");
       }
     }
 

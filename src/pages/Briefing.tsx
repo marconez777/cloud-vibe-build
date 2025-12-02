@@ -6,9 +6,10 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import { Sparkles, ArrowRight, Upload, Lightbulb } from "lucide-react";
+import { Sparkles, ArrowRight, Lightbulb } from "lucide-react";
 import { toast } from "sonner";
 import { useCreateProject } from "@/hooks/useProjects";
+import { ImageUpload } from "@/components/ImageUpload";
 
 const examples = [
   "Site para clínica odontológica com hero, serviços, depoimentos e contato. Cores azul e branco.",
@@ -20,6 +21,7 @@ export default function Briefing() {
   const navigate = useNavigate();
   const [name, setName] = useState("");
   const [briefing, setBriefing] = useState("");
+  const [referenceImages, setReferenceImages] = useState<string[]>([]);
   const createProject = useCreateProject();
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -36,14 +38,20 @@ export default function Briefing() {
     }
 
     try {
+      // Include reference images in the description if any
+      let fullDescription = briefing.trim();
+      if (referenceImages.length > 0) {
+        fullDescription += `\n\n[Imagens de referência: ${referenceImages.join(", ")}]`;
+      }
+
       const project = await createProject.mutateAsync({
         name: name.trim(),
-        description: briefing.trim(),
+        description: fullDescription,
         status: "draft",
       });
-      
+
       toast.success("Projeto criado com sucesso!");
-      navigate(`/projects`);
+      navigate(`/vibe/${project.id}`);
     } catch (error) {
       console.error("Error creating project:", error);
       toast.error("Erro ao criar projeto. Tente novamente.");
@@ -104,17 +112,11 @@ export default function Briefing() {
 
                   <div className="space-y-2">
                     <Label>Imagens de Referência (opcional)</Label>
-                    <div className="flex items-center justify-center rounded-lg border border-dashed border-border bg-muted/30 p-8 transition-colors hover:border-primary/50">
-                      <div className="text-center">
-                        <Upload className="mx-auto h-8 w-8 text-muted-foreground" />
-                        <p className="mt-2 text-sm text-muted-foreground">
-                          Arraste imagens ou clique para upload
-                        </p>
-                        <p className="text-xs text-muted-foreground">
-                          PNG, JPG até 10MB
-                        </p>
-                      </div>
-                    </div>
+                    <ImageUpload
+                      onImagesChange={setReferenceImages}
+                      maxFiles={5}
+                      maxSize={10}
+                    />
                   </div>
 
                   <Button
@@ -172,6 +174,7 @@ export default function Briefing() {
                   <li>• Liste as seções desejadas</li>
                   <li>• Especifique cores preferidas</li>
                   <li>• Descreva o tom (formal, descontraído...)</li>
+                  <li>• Adicione imagens de sites que você gosta</li>
                 </ul>
               </CardContent>
             </Card>

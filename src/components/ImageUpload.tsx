@@ -22,6 +22,8 @@ export function ImageUpload({
   const inputRef = useRef<HTMLInputElement>(null);
 
   const uploadFile = async (file: File): Promise<string | null> => {
+    console.log("Uploading file:", file.name, file.type, file.size);
+    
     if (file.size > maxSize * 1024 * 1024) {
       toast.error(`Arquivo muito grande. Máximo ${maxSize}MB`);
       return null;
@@ -36,25 +38,39 @@ export function ImageUpload({
     const fileName = `${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
     const filePath = `references/${fileName}`;
 
-    const { error } = await supabase.storage
+    console.log("Uploading to path:", filePath);
+
+    const { data, error } = await supabase.storage
       .from("project-assets")
-      .upload(filePath, file);
+      .upload(filePath, file, {
+        cacheControl: "3600",
+        upsert: false
+      });
 
     if (error) {
-      console.error("Upload error:", error);
-      toast.error("Erro ao fazer upload");
+      console.error("Upload error:", error.message, error);
+      toast.error(`Erro: ${error.message}`);
       return null;
     }
+
+    console.log("Upload success:", data);
 
     const { data: publicUrl } = supabase.storage
       .from("project-assets")
       .getPublicUrl(filePath);
 
+    console.log("Public URL:", publicUrl.publicUrl);
     return publicUrl.publicUrl;
   };
 
   const handleFiles = async (files: FileList | File[]) => {
     const fileArray = Array.from(files);
+    console.log("handleFiles called with", fileArray.length, "files");
+    
+    if (fileArray.length === 0) {
+      console.log("No files selected");
+      return;
+    }
     
     if (images.length + fileArray.length > maxFiles) {
       toast.error(`Máximo de ${maxFiles} imagens`);
@@ -62,16 +78,21 @@ export function ImageUpload({
     }
 
     setIsUploading(true);
+    toast.info("Iniciando upload...");
 
     const uploadPromises = fileArray.map(uploadFile);
     const results = await Promise.all(uploadPromises);
     const successfulUploads = results.filter((url): url is string => url !== null);
+
+    console.log("Upload results:", successfulUploads);
 
     if (successfulUploads.length > 0) {
       const newImages = [...images, ...successfulUploads];
       setImages(newImages);
       onImagesChange(newImages);
       toast.success(`${successfulUploads.length} imagem(ns) enviada(s)`);
+    } else {
+      toast.error("Nenhuma imagem foi enviada. Verifique o console.");
     }
 
     setIsUploading(false);

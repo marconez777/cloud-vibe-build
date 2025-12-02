@@ -32,6 +32,12 @@ const designAnalystPrompt = `You are a DESIGN ANALYST AI specialized in extracti
 
 Your job is to analyze the provided reference images (if any) and the business briefing to create a DETAILED DESIGN SPECIFICATION that will guide a code generator.
 
+## CRITICAL: FONT SELECTION
+You MUST consult the "Biblioteca de Fontes Profissionais - Google Fonts" memory in your context.
+1. Identify the business niche (healthcare, services, restaurant, legal, tech, beauty, fitness, education, real estate, e-commerce)
+2. Select font combination from the library based on niche and desired tone
+3. Use the EXACT Google Fonts URL from the library - do NOT fabricate URLs
+
 ## OUTPUT FORMAT (STRICT JSON):
 {
   "design": {

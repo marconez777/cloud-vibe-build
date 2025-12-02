@@ -262,6 +262,80 @@ export type Database = {
           },
         ]
       }
+      project_settings: {
+        Row: {
+          address: string | null
+          business_hours: Json | null
+          city: string | null
+          company_name: string | null
+          created_at: string
+          custom_fields: Json | null
+          email: string | null
+          favicon_url: string | null
+          gallery_images: string[] | null
+          id: string
+          logo_url: string | null
+          phone: string | null
+          project_id: string
+          slogan: string | null
+          social_links: Json | null
+          state: string | null
+          updated_at: string
+          whatsapp: string | null
+          zip_code: string | null
+        }
+        Insert: {
+          address?: string | null
+          business_hours?: Json | null
+          city?: string | null
+          company_name?: string | null
+          created_at?: string
+          custom_fields?: Json | null
+          email?: string | null
+          favicon_url?: string | null
+          gallery_images?: string[] | null
+          id?: string
+          logo_url?: string | null
+          phone?: string | null
+          project_id: string
+          slogan?: string | null
+          social_links?: Json | null
+          state?: string | null
+          updated_at?: string
+          whatsapp?: string | null
+          zip_code?: string | null
+        }
+        Update: {
+          address?: string | null
+          business_hours?: Json | null
+          city?: string | null
+          company_name?: string | null
+          created_at?: string
+          custom_fields?: Json | null
+          email?: string | null
+          favicon_url?: string | null
+          gallery_images?: string[] | null
+          id?: string
+          logo_url?: string | null
+          phone?: string | null
+          project_id?: string
+          slogan?: string | null
+          social_links?: Json | null
+          state?: string | null
+          updated_at?: string
+          whatsapp?: string | null
+          zip_code?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "project_settings_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: true
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       projects: {
         Row: {
           created_at: string

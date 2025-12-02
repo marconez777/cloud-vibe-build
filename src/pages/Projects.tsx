@@ -88,52 +88,54 @@ export default function Projects() {
         {!isLoading && !error && filteredProjects && filteredProjects.length > 0 && (
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {filteredProjects.map((project) => (
-              <Card key={project.id} variant="interactive" className="group">
-                <CardContent className="p-0">
-                  {/* Thumbnail */}
-                  <div className="aspect-video bg-muted/50 flex items-center justify-center border-b border-border">
-                    <FolderOpen className="h-12 w-12 text-muted-foreground/50" />
-                  </div>
-                  
-                  {/* Content */}
-                  <div className="p-4">
-                    <div className="flex items-start justify-between gap-2">
-                      <div className="min-w-0 flex-1">
-                        <h3 className="font-heading font-semibold truncate">
-                          {project.name}
-                        </h3>
-                        <p className="text-sm text-muted-foreground line-clamp-2 mt-1">
-                          {project.description || "Sem descrição"}
-                        </p>
-                      </div>
-                      <Badge variant={statusLabels[project.status]?.variant || "secondary"}>
-                        {statusLabels[project.status]?.label || project.status}
-                      </Badge>
+              <Link key={project.id} to={`/preview/${project.id}`}>
+                <Card variant="interactive" className="group h-full">
+                  <CardContent className="p-0">
+                    {/* Thumbnail */}
+                    <div className="aspect-video bg-muted/50 flex items-center justify-center border-b border-border">
+                      <FolderOpen className="h-12 w-12 text-muted-foreground/50" />
                     </div>
                     
-                    <div className="mt-4 flex items-center justify-between">
-                      <span className="flex items-center gap-1 text-xs text-muted-foreground">
-                        <Clock className="h-3 w-3" />
-                        {formatDistanceToNow(new Date(project.created_at), {
-                          addSuffix: true,
-                          locale: ptBR,
-                        })}
-                      </span>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity"
-                        onClick={(e) => {
-                          e.preventDefault();
-                          handleDelete(project.id, project.name);
-                        }}
-                      >
-                        <Trash2 className="h-4 w-4 text-muted-foreground hover:text-destructive" />
-                      </Button>
+                    {/* Content */}
+                    <div className="p-4">
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="min-w-0 flex-1">
+                          <h3 className="font-heading font-semibold truncate">
+                            {project.name}
+                          </h3>
+                          <p className="text-sm text-muted-foreground line-clamp-2 mt-1">
+                            {project.description || "Sem descrição"}
+                          </p>
+                        </div>
+                        <Badge variant={statusLabels[project.status]?.variant || "secondary"}>
+                          {statusLabels[project.status]?.label || project.status}
+                        </Badge>
+                      </div>
+                      
+                      <div className="mt-4 flex items-center justify-between">
+                        <span className="flex items-center gap-1 text-xs text-muted-foreground">
+                          <Clock className="h-3 w-3" />
+                          {formatDistanceToNow(new Date(project.created_at), {
+                            addSuffix: true,
+                            locale: ptBR,
+                          })}
+                        </span>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            handleDelete(project.id, project.name);
+                          }}
+                        >
+                          <Trash2 className="h-4 w-4 text-muted-foreground hover:text-destructive" />
+                        </Button>
+                      </div>
                     </div>
-                  </div>
-                </CardContent>
-              </Card>
+                  </CardContent>
+                </Card>
+              </Link>
             ))}
           </div>
         )}

@@ -9,6 +9,9 @@ import Projects from "./pages/Projects";
 import Briefing from "./pages/Briefing";
 import Knowledge from "./pages/Knowledge";
 import Help from "./pages/Help";
+import Preview from "./pages/Preview";
+import VibeChat from "./pages/VibeChat";
+import Versions from "./pages/Versions";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -26,6 +29,9 @@ const App = () => (
           <Route path="/new" element={<Briefing />} />
           <Route path="/knowledge" element={<Knowledge />} />
           <Route path="/help" element={<Help />} />
+          <Route path="/preview/:projectId" element={<Preview />} />
+          <Route path="/vibe/:projectId" element={<VibeChat />} />
+          <Route path="/versions/:projectId" element={<Versions />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>

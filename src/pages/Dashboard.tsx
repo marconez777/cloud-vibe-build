@@ -124,25 +124,27 @@ export default function Dashboard() {
           ) : recentProjects && recentProjects.length > 0 ? (
             <div className="space-y-3">
               {recentProjects.map((project) => (
-                <Card key={project.id} variant="interactive">
-                  <CardContent className="flex items-center gap-4 p-4">
-                    <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-muted">
-                      <FolderOpen className="h-6 w-6 text-muted-foreground" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <h3 className="font-heading font-semibold truncate">
-                        {project.name}
-                      </h3>
-                      <p className="text-sm text-muted-foreground">
-                        {formatDistanceToNow(new Date(project.created_at), {
-                          addSuffix: true,
-                          locale: ptBR,
-                        })}
-                      </p>
-                    </div>
-                    <ArrowRight className="h-5 w-5 text-muted-foreground" />
-                  </CardContent>
-                </Card>
+                <Link key={project.id} to={`/preview/${project.id}`}>
+                  <Card variant="interactive">
+                    <CardContent className="flex items-center gap-4 p-4">
+                      <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-muted">
+                        <FolderOpen className="h-6 w-6 text-muted-foreground" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <h3 className="font-heading font-semibold truncate">
+                          {project.name}
+                        </h3>
+                        <p className="text-sm text-muted-foreground">
+                          {formatDistanceToNow(new Date(project.created_at), {
+                            addSuffix: true,
+                            locale: ptBR,
+                          })}
+                        </p>
+                      </div>
+                      <ArrowRight className="h-5 w-5 text-muted-foreground" />
+                    </CardContent>
+                  </Card>
+                </Link>
               ))}
               <Link to="/projects" className="block">
                 <Button variant="ghost" className="w-full">

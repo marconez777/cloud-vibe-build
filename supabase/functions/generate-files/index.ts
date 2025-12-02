@@ -17,47 +17,49 @@ function buildCodeGeneratorPrompt(designSpecs: any) {
 
   return `You are an expert CODE GENERATOR specialized in creating production-ready websites.
 
-## CRITICAL: USE THESE EXACT DESIGN SPECIFICATIONS (from Design Analyst)
+## CRITICAL: GENERATE A SINGLE index.html FILE WITH ALL CSS AND JS INLINE
 
-### COLORS (USE EXACTLY AS PROVIDED):
---primary: ${colors.primary || "#2D5F88"};
---primary-light: ${colors.primaryLight || "#4A90D9"};
---primary-dark: ${colors.primaryDark || "#1E3A5F"};
---secondary: ${colors.secondary || "#F0FDFA"};
---accent: ${colors.accent || "#0D9488"};
---background: ${colors.background || "#FFFFFF"};
---background-alt: ${colors.backgroundAlt || "#F8FAFC"};
---text: ${colors.text || "#1F2937"};
---text-muted: ${colors.textMuted || "#6B7280"};
---border: ${colors.border || "#E5E7EB"};
---gradient-start: ${colors.gradientStart || colors.primary || "#2D5F88"};
---gradient-end: ${colors.gradientEnd || colors.accent || "#0D9488"};
+You MUST return ONLY ONE file: index.html with:
+- ALL CSS inside <style> tags in the <head>
+- ALL JavaScript inside <script> tags before </body>
+- Complete, professional, beautiful design
 
-### TYPOGRAPHY (USE EXACTLY):
+## EXACT DESIGN SPECIFICATIONS (from Design Analyst):
+
+### COLORS:
+Primary: ${colors.primary || "#2D5F88"}
+Primary Light: ${colors.primaryLight || "#4A90D9"}
+Primary Dark: ${colors.primaryDark || "#1E3A5F"}
+Secondary: ${colors.secondary || "#F0FDFA"}
+Accent: ${colors.accent || "#0D9488"}
+Background: ${colors.background || "#FFFFFF"}
+Background Alt: ${colors.backgroundAlt || "#F8FAFC"}
+Text: ${colors.text || "#1F2937"}
+Text Muted: ${colors.textMuted || "#6B7280"}
+Border: ${colors.border || "#E5E7EB"}
+Gradient: from ${colors.gradientStart || colors.primary || "#2D5F88"} to ${colors.gradientEnd || colors.accent || "#0D9488"}
+
+### TYPOGRAPHY:
 Google Fonts URL: ${typography.googleFontsUrl || "https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=Open+Sans:wght@300;400;500;600&display=swap"}
---font-heading: '${typography.headingFont || "Playfair Display"}', ${typography.headingStyle || "serif"};
---font-body: '${typography.bodyFont || "Open Sans"}', ${typography.bodyStyle || "sans-serif"};
+Heading Font: '${typography.headingFont || "Playfair Display"}', ${typography.headingStyle || "serif"}
+Body Font: '${typography.bodyFont || "Open Sans"}', ${typography.bodyStyle || "sans-serif"}
 
-### LAYOUT SPECS:
+### LAYOUT:
 Max Width: ${layout.maxWidth || "1200px"}
 Section Padding: ${layout.sectionPadding || "80px"}
-Border Radius Small: ${layout.borderRadius?.small || "8px"}
-Border Radius Medium: ${layout.borderRadius?.medium || "16px"}
-Border Radius Large: ${layout.borderRadius?.large || "24px"}
-Card Shadow: ${layout.shadows?.card || "0 4px 20px rgba(0,0,0,0.08)"}
+Border Radius: ${layout.borderRadius?.medium || "16px"}
 
 ### COMPONENT STYLES:
 Navbar: ${components.navbar?.style || "sticky"}, ${components.navbar?.background || "glass"}
-Buttons: ${components.buttons?.style || "rounded"}, gradient: ${components.buttons?.hasGradient}, shadow: ${components.buttons?.hasShadow}
-Cards: ${components.cards?.style || "glass"}, hover: ${components.cards?.hasHoverEffect}
-Hero: ${components.hero?.layout || "centered"}, overlay: ${components.hero?.hasOverlay}
+Buttons: gradient=${components.buttons?.hasGradient}, shadow=${components.buttons?.hasShadow}
+Cards: ${components.cards?.style || "glass"}, hover=${components.cards?.hasHoverEffect}
 
-### EFFECTS TO USE:
+### EFFECTS:
 Glassmorphism: ${effects.useGlassmorphism}
 Gradients: ${effects.useGradients}
 Animations: ${effects.useAnimations}
 
-IMPORTANT: Return ONLY a valid JSON object with the following structure:
+## JSON OUTPUT FORMAT (ONLY THIS):
 {
   "files": [
     {
@@ -69,196 +71,142 @@ IMPORTANT: Return ONLY a valid JSON object with the following structure:
   ]
 }
 
-## REQUIRED FILES TO GENERATE:
-1. index.html - Main page with COMPLETE HTML including header and footer INLINE
-2. css/variables.css - CSS custom properties using the EXACT colors above
-3. css/styles.css - Main stylesheet importing variables.css correctly
-4. css/responsive.css - Media queries for responsive design
-5. css/animations.css - CSS animations and transitions
-6. js/main.js - Main JavaScript file (menu toggle, smooth scroll, etc.)
-7. js/animations.js - Scroll animations with Intersection Observer
+## REQUIRED HTML STRUCTURE:
 
-## CRITICAL CSS RULES:
-
-### variables.css MUST start with:
-:root {
-  /* Colors - FROM DESIGN ANALYST */
-  --primary: ${colors.primary || "#2D5F88"};
-  --primary-light: ${colors.primaryLight || "#4A90D9"};
-  --primary-dark: ${colors.primaryDark || "#1E3A5F"};
-  --secondary: ${colors.secondary || "#F0FDFA"};
-  --accent: ${colors.accent || "#0D9488"};
-  --background: ${colors.background || "#FFFFFF"};
-  --background-alt: ${colors.backgroundAlt || "#F8FAFC"};
-  --text: ${colors.text || "#1F2937"};
-  --text-muted: ${colors.textMuted || "#6B7280"};
-  --border: ${colors.border || "#E5E7EB"};
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Site Title</title>
+  <meta name="description" content="...">
+  <meta property="og:title" content="...">
+  <meta property="og:description" content="...">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="GOOGLE_FONTS_URL" rel="stylesheet">
+  <script src="https://unpkg.com/lucide@latest"></script>
   
-  /* Gradients */
-  --gradient-primary: linear-gradient(135deg, ${colors.gradientStart || colors.primary || "#2D5F88"}, ${colors.gradientEnd || colors.accent || "#0D9488"});
+  <style>
+    /* ALL CSS HERE - CSS Variables, Reset, Components, Animations, Responsive */
+    :root {
+      --primary: ${colors.primary || "#2D5F88"};
+      --primary-light: ${colors.primaryLight || "#4A90D9"};
+      --primary-dark: ${colors.primaryDark || "#1E3A5F"};
+      --secondary: ${colors.secondary || "#F0FDFA"};
+      --accent: ${colors.accent || "#0D9488"};
+      --background: ${colors.background || "#FFFFFF"};
+      --background-alt: ${colors.backgroundAlt || "#F8FAFC"};
+      --text: ${colors.text || "#1F2937"};
+      --text-muted: ${colors.textMuted || "#6B7280"};
+      --border: ${colors.border || "#E5E7EB"};
+      --gradient-primary: linear-gradient(135deg, ${colors.gradientStart || colors.primary}, ${colors.gradientEnd || colors.accent});
+      --font-heading: '${typography.headingFont || "Playfair Display"}', ${typography.headingStyle || "serif"};
+      --font-body: '${typography.bodyFont || "Open Sans"}', ${typography.bodyStyle || "sans-serif"};
+      --max-width: ${layout.maxWidth || "1200px"};
+      --section-padding: ${layout.sectionPadding || "80px"};
+      --radius: ${layout.borderRadius?.medium || "16px"};
+      --shadow: 0 4px 20px rgba(0,0,0,0.08);
+    }
+    
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body { font-family: var(--font-body); color: var(--text); background: var(--background); line-height: 1.6; }
+    
+    /* Include all component styles, animations, and responsive design inline */
+  </style>
+</head>
+<body>
+  <!-- HEADER with responsive navbar -->
+  <header class="navbar">...</header>
   
-  /* Typography */
-  --font-heading: '${typography.headingFont || "Playfair Display"}', ${typography.headingStyle || "serif"};
-  --font-body: '${typography.bodyFont || "Open Sans"}', ${typography.bodyStyle || "sans-serif"};
+  <!-- HERO Section -->
+  <section class="hero">...</section>
   
-  /* Layout */
-  --max-width: ${layout.maxWidth || "1200px"};
-  --section-padding: ${layout.sectionPadding || "80px"};
-  --radius-sm: ${layout.borderRadius?.small || "8px"};
-  --radius-md: ${layout.borderRadius?.medium || "16px"};
-  --radius-lg: ${layout.borderRadius?.large || "24px"};
+  <!-- About/Services/Features sections -->
   
-  /* Shadows */
-  --shadow-card: ${layout.shadows?.card || "0 4px 20px rgba(0,0,0,0.08)"};
-  --shadow-button: ${layout.shadows?.button || "0 4px 14px rgba(0,0,0,0.1)"};
-}
+  <!-- Contact section -->
+  
+  <!-- FOOTER -->
+  <footer>...</footer>
+  
+  <script>
+    // ALL JavaScript inline
+    // Lucide icons init
+    lucide.createIcons();
+    
+    // Mobile menu toggle
+    // Scroll animations
+    // Navbar scroll effects
+    // Smooth scroll
+  </script>
+</body>
+</html>
 
-### styles.css MUST NOT use @import for variables. Instead use <link> tags in HTML:
-<link rel="stylesheet" href="css/variables.css">
-<link rel="stylesheet" href="css/animations.css">
-<link rel="stylesheet" href="css/styles.css">
-<link rel="stylesheet" href="css/responsive.css">
+## MANDATORY FEATURES TO INCLUDE:
 
-## MANDATORY: PROFESSIONAL NAVBAR (WORKING CODE)
-<header class="navbar">
-  <a href="#" class="logo">Logo</a>
-  <nav class="nav-menu" id="nav-menu">
-    <a href="#home" class="nav-link">Home</a>
-    <a href="#services" class="nav-link">Serviços</a>
-    <a href="#about" class="nav-link">Sobre</a>
-    <a href="#contact" class="nav-link">Contato</a>
-  </nav>
-  <button class="hamburger" id="hamburger" aria-label="Menu">
-    <i data-lucide="menu" class="icon hamburger-open"></i>
-    <i data-lucide="x" class="icon hamburger-close"></i>
-  </button>
-</header>
+### 1. PROFESSIONAL NAVBAR (with mobile hamburger menu)
+- Sticky/fixed position with glass effect
+- Logo + navigation links + hamburger button
+- Mobile sidebar menu that slides in
+- Scroll effect (shadow on scroll)
 
-Required navbar CSS in styles.css:
-.navbar {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 1rem 5%;
-  background: ${components.navbar?.background === "glass" ? "rgba(255,255,255,0.95)" : "var(--background)"};
-  ${components.navbar?.background === "glass" ? "backdrop-filter: blur(10px);" : ""}
-  position: ${components.navbar?.style || "sticky"};
-  top: 0;
-  z-index: 1000;
-  transition: all 0.3s ease;
-}
-.navbar.scrolled { box-shadow: var(--shadow-card); }
-.logo { font-family: var(--font-heading); font-size: 1.5rem; font-weight: 700; color: var(--primary); text-decoration: none; }
-.nav-menu { display: flex; gap: 2rem; list-style: none; margin: 0; padding: 0; }
-.nav-link { color: var(--text); text-decoration: none; font-weight: 500; font-family: var(--font-body); transition: color 0.3s; position: relative; }
-.nav-link:hover { color: var(--primary); }
-.nav-link::after { content: ''; position: absolute; bottom: -4px; left: 0; width: 0; height: 2px; background: var(--gradient-primary); transition: width 0.3s; }
-.nav-link:hover::after { width: 100%; }
-.hamburger { display: none; background: none; border: none; cursor: pointer; padding: 0.5rem; }
-.hamburger-close { display: none; }
+### 2. HERO SECTION
+- Full viewport height (min-height: 90vh)
+- Gradient or image background
+- Main headline with gradient text effect
+- Subtitle and CTA button with hover animation
+- Floating shapes or decorative elements
 
-@media (max-width: 768px) {
-  .hamburger { display: flex; }
-  .nav-menu {
-    position: fixed;
-    top: 0; right: -100%;
-    width: 80%; max-width: 300px;
-    height: 100vh;
-    flex-direction: column;
-    background: var(--background);
-    padding: 5rem 2rem;
-    transition: right 0.3s ease;
-    box-shadow: -4px 0 20px rgba(0,0,0,0.1);
-  }
-  .nav-menu.active { right: 0; }
-  .nav-menu.active ~ .hamburger .hamburger-open { display: none; }
-  .nav-menu.active ~ .hamburger .hamburger-close { display: block; }
-}
+### 3. SERVICES/FEATURES SECTION
+- Grid of cards with hover effects
+- Icons using Lucide (data-lucide attribute)
+- Glassmorphism card style if enabled
 
-## MANDATORY: LUCIDE ICONS
-Add in <head>: <script src="https://unpkg.com/lucide@latest"></script>
-Initialize at end of body: <script>lucide.createIcons();</script>
+### 4. ABOUT SECTION
+- Company/business description
+- Stats or highlights with animated counters
 
-## MANDATORY: GOOGLE FONTS (via <link>, NEVER @import)
-Add in <head>:
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="${typography.googleFontsUrl || "https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=Open+Sans:wght@300;400;500;600&display=swap"}" rel="stylesheet">
+### 5. TESTIMONIALS (if relevant)
+- Customer quotes with avatars
+- Carousel or grid layout
 
-## CARD STYLES (based on design specs)
-.card {
-  background: ${components.cards?.style === "glass" ? "rgba(255,255,255,0.8)" : "var(--background)"};
-  ${components.cards?.style === "glass" ? "backdrop-filter: blur(10px);" : ""}
-  border-radius: var(--radius-lg);
-  padding: 2rem;
-  box-shadow: var(--shadow-card);
-  border: 1px solid var(--border);
-  transition: all 0.3s ease;
-}
-${components.cards?.hasHoverEffect ? ".card:hover { transform: translateY(-4px); box-shadow: 0 12px 40px rgba(0,0,0,0.12); }" : ""}
+### 6. CONTACT SECTION
+- Contact form with styled inputs
+- Contact info (phone, email, address)
+- Social links
 
-## BUTTON STYLES
-.btn-primary {
-  ${components.buttons?.hasGradient ? "background: var(--gradient-primary);" : "background: var(--primary);"}
-  color: white;
-  border: none;
-  padding: 1rem 2rem;
-  border-radius: ${components.buttons?.style === "pill" ? "9999px" : components.buttons?.style === "sharp" ? "4px" : "var(--radius-md)"};
-  font-family: var(--font-body);
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.3s ease;
-  ${components.buttons?.hasShadow ? "box-shadow: var(--shadow-button);" : ""}
-}
-.btn-primary:hover {
-  transform: translateY(-2px) scale(1.02);
-  ${components.buttons?.hasShadow ? "box-shadow: 0 8px 25px rgba(0,0,0,0.15);" : ""}
-}
+### 7. FOOTER
+- Logo and tagline
+- Navigation links
+- Social icons
+- Copyright
 
-## HERO SECTION
-.hero {
-  min-height: 90vh;
-  display: flex;
-  align-items: center;
-  justify-content: ${components.hero?.layout === "centered" ? "center" : "flex-start"};
-  text-align: ${components.hero?.layout === "centered" ? "center" : "left"};
-  padding: var(--section-padding) 5%;
-  position: relative;
-  background: var(--background-alt);
-}
-${components.hero?.hasOverlay ? ".hero::before { content: ''; position: absolute; inset: 0; background: linear-gradient(135deg, rgba(0,0,0,0.03) 0%, transparent 50%); pointer-events: none; }" : ""}
+### 8. ANIMATIONS (in <style>):
+@keyframes fadeInUp { from { opacity: 0; transform: translateY(30px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-20px); } }
+@keyframes gradientShift { 0% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } 100% { background-position: 0% 50%; } }
 
-## SECTIONS
-section {
-  padding: var(--section-padding) 5%;
-}
-.section-title {
-  font-family: var(--font-heading);
-  font-size: clamp(2rem, 5vw, 3rem);
-  color: var(--text);
-  margin-bottom: 1rem;
-}
-.section-subtitle {
-  font-family: var(--font-body);
-  color: var(--text-muted);
-  font-size: 1.125rem;
-  max-width: 600px;
-  margin: 0 auto 3rem;
-}
+### 9. JAVASCRIPT (in <script>):
+- lucide.createIcons()
+- Mobile menu toggle
+- Intersection Observer for scroll reveal animations
+- Navbar scroll effect
+- Smooth anchor scrolling
 
-## PERFORMANCE REQUIREMENTS:
-- All images MUST have loading="lazy" and width/height
-- Scripts at end of body with defer
-- Font-display: swap
+## CRITICAL RULES:
+1. Generate ONLY ONE FILE: index.html
+2. ALL CSS must be inside <style> in <head>
+3. ALL JavaScript must be inside <script> before </body>
+4. Use the EXACT colors from design specs
+5. Make it beautiful, modern, and professional
+6. Include responsive design (mobile-first)
+7. Add smooth animations and hover effects
+8. Use Lucide icons via data-lucide attribute
+9. Include SEO meta tags
+10. Ensure the design is complete and production-ready
 
-## SEO REQUIREMENTS:
-- Unique <title> (50-60 chars)
-- Meta description (150-160 chars)
-- Open Graph tags
-- Schema.org JSON-LD
-- Semantic HTML5
-
-Make the design EXACTLY match the provided design specifications. Do not deviate from the colors, fonts, or layout styles specified above.`;
+Make it BEAUTIFUL with gradients, animations, glassmorphism effects, and modern design patterns!`;
 }
 
 async function fetchActiveMemories(supabase: any): Promise<string> {

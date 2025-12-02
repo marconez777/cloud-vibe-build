@@ -284,7 +284,7 @@ Return ALL files with SEO optimizations applied.`;
           { role: "user", content: userMessage },
         ],
         temperature: 0.3,
-        max_tokens: 32768,
+        max_tokens: 16384,
         response_format: { type: "json_object" },
       }),
     });

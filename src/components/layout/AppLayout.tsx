@@ -14,7 +14,7 @@ export function AppLayout({ children }: AppLayoutProps) {
       <AppSidebar collapsed={collapsed} onToggle={() => setCollapsed(!collapsed)} />
       <main
         className={cn(
-          "h-screen overflow-hidden transition-all duration-300",
+          "h-screen overflow-y-auto overflow-x-hidden transition-all duration-300",
           collapsed ? "ml-16" : "ml-64"
         )}
       >

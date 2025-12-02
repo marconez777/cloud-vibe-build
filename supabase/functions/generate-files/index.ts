@@ -258,6 +258,84 @@ async function fetchCustomAgentPrompt(supabase: any, agentSlug: string): Promise
   }
 }
 
+async function fetchProjectSettings(supabase: any, projectId: string): Promise<any> {
+  try {
+    const { data, error } = await supabase
+      .from("project_settings")
+      .select("*")
+      .eq("project_id", projectId)
+      .maybeSingle();
+
+    if (error || !data) {
+      console.log("No project settings found");
+      return null;
+    }
+
+    console.log("Project settings loaded:", data.company_name);
+    return data;
+  } catch (e) {
+    console.error("Error fetching project settings:", e);
+    return null;
+  }
+}
+
+function buildBusinessDataPrompt(settings: any): string {
+  if (!settings) return "";
+
+  const parts: string[] = [];
+  
+  if (settings.company_name) parts.push(`Nome da Empresa: ${settings.company_name}`);
+  if (settings.slogan) parts.push(`Slogan: ${settings.slogan}`);
+  if (settings.logo_url) parts.push(`Logo URL: ${settings.logo_url}`);
+  if (settings.favicon_url) parts.push(`Favicon URL: ${settings.favicon_url}`);
+  
+  if (settings.address || settings.city || settings.state) {
+    const addressParts = [settings.address, settings.city, settings.state].filter(Boolean);
+    parts.push(`Endereço: ${addressParts.join(", ")}`);
+  }
+  if (settings.zip_code) parts.push(`CEP: ${settings.zip_code}`);
+  if (settings.phone) parts.push(`Telefone: ${settings.phone}`);
+  if (settings.whatsapp) parts.push(`WhatsApp: ${settings.whatsapp}`);
+  if (settings.email) parts.push(`Email: ${settings.email}`);
+
+  // Social links
+  const social = settings.social_links || {};
+  if (social.instagram) parts.push(`Instagram: ${social.instagram}`);
+  if (social.facebook) parts.push(`Facebook: ${social.facebook}`);
+  if (social.linkedin) parts.push(`LinkedIn: ${social.linkedin}`);
+  if (social.youtube) parts.push(`YouTube: ${social.youtube}`);
+  if (social.tiktok) parts.push(`TikTok: ${social.tiktok}`);
+  if (social.twitter) parts.push(`Twitter: ${social.twitter}`);
+
+  // Business hours
+  const hours = settings.business_hours || {};
+  const daysMap: Record<string, string> = {
+    monday: "Segunda", tuesday: "Terça", wednesday: "Quarta",
+    thursday: "Quinta", friday: "Sexta", saturday: "Sábado", sunday: "Domingo"
+  };
+  const hoursParts = Object.entries(hours)
+    .filter(([_, v]) => v && v !== "Fechado")
+    .map(([day, time]) => `${daysMap[day] || day}: ${time}`);
+  if (hoursParts.length > 0) {
+    parts.push(`Horário de Funcionamento: ${hoursParts.join(" | ")}`);
+  }
+
+  // Custom fields
+  const custom = settings.custom_fields || {};
+  Object.entries(custom).forEach(([key, value]) => {
+    if (value) parts.push(`${key}: ${value}`);
+  });
+
+  // Gallery images
+  if (settings.gallery_images?.length > 0) {
+    parts.push(`Galeria de Imagens: ${settings.gallery_images.join(", ")}`);
+  }
+
+  if (parts.length === 0) return "";
+
+  return `\n\n## BUSINESS DATA (USE THESE IN THE GENERATED WEBSITE):\n${parts.join("\n")}`;
+}
+
 async function analyzeDesign(briefing: string, referenceImages?: string[]): Promise<any> {
   const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
   const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -370,6 +448,11 @@ serve(async (req) => {
     const memoryContext = await fetchActiveMemories(supabase);
     console.log("Memory context loaded:", memoryContext ? "yes" : "no");
 
+    // Fetch project settings for business data
+    const projectSettings = projectId ? await fetchProjectSettings(supabase, projectId) : null;
+    const businessDataPrompt = buildBusinessDataPrompt(projectSettings);
+    console.log("Business data loaded:", businessDataPrompt ? "yes" : "no");
+
     let systemPrompt: string;
     const messages: any[] = [];
 
@@ -403,15 +486,22 @@ serve(async (req) => {
 
       // Step 2: Build Code Generator prompt with design specs
       console.log("Step 2: Building Code Generator prompt...");
-      systemPrompt = buildCodeGeneratorPrompt(designSpecs) + memoryContext;
+      systemPrompt = buildCodeGeneratorPrompt(designSpecs) + memoryContext + businessDataPrompt;
 
       messages.push({
         role: "system",
         content: systemPrompt,
       });
+      
+      let userPrompt = `Create a complete website with the following briefing:\n\n${briefing || userMessage}\n\nIMPORTANT: Use the EXACT colors and fonts specified in the system prompt. These came from the Design Analyst agent who analyzed the reference images and business context.`;
+      
+      if (businessDataPrompt) {
+        userPrompt += `\n\nIMPORTANT: Use the BUSINESS DATA provided in the system prompt. Include the company name, logo, contact information, social links, and business hours in the appropriate sections of the website.`;
+      }
+      
       messages.push({
         role: "user",
-        content: `Create a complete website with the following briefing:\n\n${briefing || userMessage}\n\nIMPORTANT: Use the EXACT colors and fonts specified in the system prompt. These came from the Design Analyst agent who analyzed the reference images and business context.`,
+        content: userPrompt,
       });
     }
 

@@ -15,6 +15,7 @@ import {
   Code,
   FolderTree,
   Copy,
+  Settings,
 } from "lucide-react";
 import { ExportOptionsDialog, ExportOptions } from "@/components/export/ExportOptionsDialog";
 import { useProject } from "@/hooks/useProjects";
@@ -433,20 +434,28 @@ export default function VibeChat() {
               </TabsList>
             </Tabs>
 
-            {hasFiles && (
-              <div className="flex gap-2">
-                <Link to={`/page-multiplier/${projectId}`}>
-                  <Button variant="outline" size="sm" className="gap-2">
-                    <Copy className="h-4 w-4" />
-                    Multiplicar Páginas
-                  </Button>
-                </Link>
-                <Button variant="outline" size="sm" onClick={() => setExportDialogOpen(true)} className="gap-2">
-                  <Download className="h-4 w-4" />
-                  Exportar ZIP
+            <div className="flex gap-2">
+              <Link to={`/settings/${projectId}`}>
+                <Button variant="outline" size="sm" className="gap-2">
+                  <Settings className="h-4 w-4" />
+                  Personalizar
                 </Button>
-              </div>
-            )}
+              </Link>
+              {hasFiles && (
+                <>
+                  <Link to={`/page-multiplier/${projectId}`}>
+                    <Button variant="outline" size="sm" className="gap-2">
+                      <Copy className="h-4 w-4" />
+                      Multiplicar
+                    </Button>
+                  </Link>
+                  <Button variant="outline" size="sm" onClick={() => setExportDialogOpen(true)} className="gap-2">
+                    <Download className="h-4 w-4" />
+                    ZIP
+                  </Button>
+                </>
+              )}
+            </div>
           </div>
 
           {/* Content */}

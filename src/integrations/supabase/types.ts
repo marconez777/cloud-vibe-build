@@ -14,7 +14,80 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      layout_versions: {
+        Row: {
+          commit_message: string | null
+          created_at: string
+          created_by: string | null
+          id: string
+          is_current: boolean
+          layout_tree: Json
+          project_id: string
+          version_number: number
+        }
+        Insert: {
+          commit_message?: string | null
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          is_current?: boolean
+          layout_tree: Json
+          project_id: string
+          version_number?: number
+        }
+        Update: {
+          commit_message?: string | null
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          is_current?: boolean
+          layout_tree?: Json
+          project_id?: string
+          version_number?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "layout_versions_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      projects: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: string
+          layout_tree: Json | null
+          name: string
+          status: string
+          thumbnail_url: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          layout_tree?: Json | null
+          name: string
+          status?: string
+          thumbnail_url?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          layout_tree?: Json | null
+          name?: string
+          status?: string
+          thumbnail_url?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never

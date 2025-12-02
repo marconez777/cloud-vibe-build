@@ -52,6 +52,7 @@ import {
   AgentType,
 } from "@/hooks/useAIMemories";
 import { DocumentUpload } from "@/components/DocumentUpload";
+import { AgentManager } from "@/components/knowledge/AgentManager";
 
 export default function Knowledge() {
   const { data: allMemories, isLoading } = useAIMemories();
@@ -557,6 +558,9 @@ export default function Knowledge() {
 
           {/* Sidebar */}
           <div className="space-y-6">
+            {/* Agent Manager */}
+            <AgentManager />
+
             {/* Pipeline explanation */}
             <Card variant="glass">
               <CardHeader>

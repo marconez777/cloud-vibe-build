@@ -24,7 +24,6 @@ import { FileExplorer } from "@/components/file-explorer/FileExplorer";
 import { FilePreview } from "@/components/file-explorer/FilePreview";
 import { ChatHeader } from "@/components/chat/ChatHeader";
 import { MessageBubble } from "@/components/chat/MessageBubble";
-import { QuickSuggestions } from "@/components/chat/QuickSuggestions";
 import { GenerationProgress } from "@/components/chat/GenerationProgress";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
@@ -230,14 +229,6 @@ export default function VibeChat() {
     }
   };
 
-  const handleSuggestionSelect = (suggestion: string) => {
-    if (hasFiles) {
-      generateFiles(suggestion);
-    } else {
-      setInput(suggestion);
-    }
-  };
-
   const handleExportZip = async (options: ExportOptions) => {
     if (!hasFiles) return;
 
@@ -361,15 +352,6 @@ export default function VibeChat() {
               )}
             </div>
           </ScrollArea>
-
-          {/* Quick Suggestions */}
-          <div className="border-t border-border p-3">
-            <QuickSuggestions
-              hasFiles={hasFiles}
-              onSelect={handleSuggestionSelect}
-              disabled={isGenerating}
-            />
-          </div>
 
           {/* Input */}
           <div className="border-t border-border p-4">

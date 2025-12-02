@@ -14,6 +14,48 @@ export type Database = {
   }
   public: {
     Tables: {
+      ai_agents: {
+        Row: {
+          color: string
+          created_at: string
+          description: string | null
+          icon: string | null
+          id: string
+          is_active: boolean | null
+          is_system: boolean | null
+          name: string
+          slug: string
+          system_prompt: string | null
+          updated_at: string
+        }
+        Insert: {
+          color?: string
+          created_at?: string
+          description?: string | null
+          icon?: string | null
+          id?: string
+          is_active?: boolean | null
+          is_system?: boolean | null
+          name: string
+          slug: string
+          system_prompt?: string | null
+          updated_at?: string
+        }
+        Update: {
+          color?: string
+          created_at?: string
+          description?: string | null
+          icon?: string | null
+          id?: string
+          is_active?: boolean | null
+          is_system?: boolean | null
+          name?: string
+          slug?: string
+          system_prompt?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       ai_memories: {
         Row: {
           agent: string | null

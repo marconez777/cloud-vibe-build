@@ -1,3 +1,4 @@
+import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
@@ -289,8 +290,8 @@ async function fetchActiveMemories(supabase: any): Promise<string> {
 }
 
 async function analyzeDesign(briefing: string, referenceImages?: string[]): Promise<any> {
-  const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
   const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+  const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
   
   console.log("Calling Design Analyst agent...");
   
@@ -299,7 +300,7 @@ async function analyzeDesign(briefing: string, referenceImages?: string[]): Prom
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "Authorization": `Bearer ${LOVABLE_API_KEY}`,
+        "Authorization": `Bearer ${supabaseKey}`,
       },
       body: JSON.stringify({ briefing, referenceImages }),
     });
@@ -319,8 +320,8 @@ async function analyzeDesign(briefing: string, referenceImages?: string[]): Prom
 }
 
 async function optimizeSEO(files: any[], businessInfo?: any): Promise<any[]> {
-  const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
   const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+  const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
   
   console.log("Calling SEO Specialist agent...");
   
@@ -329,7 +330,7 @@ async function optimizeSEO(files: any[], businessInfo?: any): Promise<any[]> {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "Authorization": `Bearer ${LOVABLE_API_KEY}`,
+        "Authorization": `Bearer ${supabaseKey}`,
       },
       body: JSON.stringify({ files, businessInfo }),
     });
@@ -387,9 +388,9 @@ serve(async (req) => {
     console.log("Edit mode:", editMode);
     console.log("Has reference images:", !!referenceImages?.length);
 
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    if (!LOVABLE_API_KEY) {
-      throw new Error("LOVABLE_API_KEY is not configured");
+    const OPENAI_API_KEY = Deno.env.get("OPENAI_API_KEY");
+    if (!OPENAI_API_KEY) {
+      throw new Error("OPENAI_API_KEY is not configured");
     }
 
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
@@ -445,25 +446,33 @@ serve(async (req) => {
       });
     }
 
-    console.log("Step 3: Calling Code Generator (Lovable AI)...");
+    console.log("Step 3: Calling Code Generator (OpenAI GPT-4o)...");
 
-    const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+    const response = await fetch("https://api.openai.com/v1/chat/completions", {
       method: "POST",
       headers: {
-        Authorization: `Bearer ${LOVABLE_API_KEY}`,
+        Authorization: `Bearer ${OPENAI_API_KEY}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "google/gemini-2.5-flash",
+        model: "gpt-4o",
         messages,
-        temperature: 0.5, // Lower for more consistent code output
+        temperature: 0.5,
+        max_tokens: 16384,
       }),
     });
 
     if (!response.ok) {
       const errorText = await response.text();
-      console.error("AI API error:", response.status, errorText);
-      throw new Error(`AI API error: ${response.status}`);
+      console.error("OpenAI API error:", response.status, errorText);
+      
+      if (response.status === 429) {
+        throw new Error("Rate limit exceeded. Please try again later.");
+      }
+      if (response.status === 402) {
+        throw new Error("OpenAI billing issue. Please check your account.");
+      }
+      throw new Error(`OpenAI API error: ${response.status}`);
     }
 
     const data = await response.json();
@@ -543,7 +552,7 @@ serve(async (req) => {
       JSON.stringify({
         success: true,
         files: finalFiles,
-        message: editMode ? "Arquivos atualizados com sucesso!" : "Site gerado com pipeline de 3 agentes!",
+        message: editMode ? "Arquivos atualizados com sucesso!" : "Site gerado com pipeline de 3 agentes (OpenAI)!",
       }),
       {
         headers: { ...corsHeaders, "Content-Type": "application/json" },

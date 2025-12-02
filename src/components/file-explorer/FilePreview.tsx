@@ -40,7 +40,7 @@ export function FilePreview({ files }: FilePreviewProps) {
     // Collect JS
     let jsContent = "";
     for (const file of files) {
-      if (file.file_type === "js") {
+      if (file.file_type === "js" || file.file_type === "javascript") {
         jsContent += file.content + "\n";
       }
     }

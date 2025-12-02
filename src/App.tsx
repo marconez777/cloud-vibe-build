@@ -12,6 +12,7 @@ import Help from "./pages/Help";
 import Preview from "./pages/Preview";
 import VibeChat from "./pages/VibeChat";
 import Versions from "./pages/Versions";
+import PageMultiplier from "./pages/PageMultiplier";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -32,6 +33,7 @@ const App = () => (
           <Route path="/preview/:projectId" element={<Preview />} />
           <Route path="/vibe/:projectId" element={<VibeChat />} />
           <Route path="/versions/:projectId" element={<Versions />} />
+          <Route path="/page-multiplier/:projectId" element={<PageMultiplier />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>

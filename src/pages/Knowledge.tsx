@@ -25,6 +25,8 @@ import {
   CheckCircle2,
   XCircle,
   Filter,
+  Pencil,
+  X,
 } from "lucide-react";
 import { toast } from "sonner";
 import {
@@ -32,7 +34,9 @@ import {
   useCreateMemory,
   useDeleteMemory,
   useToggleMemory,
+  useUpdateMemory,
   MEMORY_CATEGORIES,
+  AIMemory,
 } from "@/hooks/useAIMemories";
 import { DocumentUpload } from "@/components/DocumentUpload";
 
@@ -41,12 +45,52 @@ export default function Knowledge() {
   const createMemory = useCreateMemory();
   const deleteMemory = useDeleteMemory();
   const toggleMemory = useToggleMemory();
+  const updateMemory = useUpdateMemory();
 
   const [newTitle, setNewTitle] = useState("");
   const [newContent, setNewContent] = useState("");
   const [newCategory, setNewCategory] = useState("general");
   const [showForm, setShowForm] = useState(false);
   const [filterCategory, setFilterCategory] = useState<string>("all");
+  
+  const [editingMemory, setEditingMemory] = useState<AIMemory | null>(null);
+  const [editTitle, setEditTitle] = useState("");
+  const [editContent, setEditContent] = useState("");
+  const [editCategory, setEditCategory] = useState("general");
+
+  const startEditing = (memory: AIMemory) => {
+    setEditingMemory(memory);
+    setEditTitle(memory.title);
+    setEditContent(memory.content);
+    setEditCategory(memory.category || "general");
+  };
+
+  const cancelEditing = () => {
+    setEditingMemory(null);
+    setEditTitle("");
+    setEditContent("");
+    setEditCategory("general");
+  };
+
+  const handleUpdateMemory = async () => {
+    if (!editingMemory || !editTitle.trim() || !editContent.trim()) {
+      toast.error("Preencha todos os campos");
+      return;
+    }
+
+    try {
+      await updateMemory.mutateAsync({
+        id: editingMemory.id,
+        title: editTitle,
+        content: editContent,
+        category: editCategory,
+      });
+      cancelEditing();
+      toast.success("Memória atualizada!");
+    } catch {
+      toast.error("Erro ao atualizar memória");
+    }
+  };
 
   const handleAddMemory = async () => {
     if (!newTitle.trim() || !newContent.trim()) {
@@ -247,46 +291,107 @@ export default function Knowledge() {
                     className={`animate-fade-in ${!memory.is_active ? "opacity-60" : ""}`}
                   >
                     <CardContent className="p-4">
-                      <div className="flex items-start justify-between gap-4">
-                        <div className="flex-1">
-                          <div className="flex items-center gap-2 flex-wrap">
-                            <h4 className="font-medium">{memory.title}</h4>
-                            <Badge variant="outline" className="text-xs">
-                              {getCategoryLabel(memory.category)}
-                            </Badge>
-                            {memory.is_active ? (
-                              <span className="flex items-center gap-1 text-xs text-green-500">
-                                <CheckCircle2 className="h-3 w-3" />
-                                Ativa
-                              </span>
-                            ) : (
-                              <span className="flex items-center gap-1 text-xs text-muted-foreground">
-                                <XCircle className="h-3 w-3" />
-                                Inativa
-                              </span>
-                            )}
+                      {editingMemory?.id === memory.id ? (
+                        <div className="space-y-4">
+                          <div className="space-y-2">
+                            <Label>Título</Label>
+                            <Input
+                              value={editTitle}
+                              onChange={(e) => setEditTitle(e.target.value)}
+                            />
                           </div>
-                          <p className="mt-1 text-sm text-muted-foreground line-clamp-2">
-                            {memory.content}
-                          </p>
+                          <div className="space-y-2">
+                            <Label>Conteúdo</Label>
+                            <Textarea
+                              className="min-h-[100px]"
+                              value={editContent}
+                              onChange={(e) => setEditContent(e.target.value)}
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <Label>Categoria</Label>
+                            <Select value={editCategory} onValueChange={setEditCategory}>
+                              <SelectTrigger>
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {MEMORY_CATEGORIES.map((cat) => (
+                                  <SelectItem key={cat.value} value={cat.value}>
+                                    {cat.label}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          <div className="flex gap-2">
+                            <Button
+                              variant="hero"
+                              onClick={handleUpdateMemory}
+                              disabled={updateMemory.isPending}
+                            >
+                              {updateMemory.isPending ? (
+                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                              ) : (
+                                <Save className="mr-2 h-4 w-4" />
+                              )}
+                              Salvar
+                            </Button>
+                            <Button variant="ghost" onClick={cancelEditing}>
+                              <X className="mr-2 h-4 w-4" />
+                              Cancelar
+                            </Button>
+                          </div>
                         </div>
-                        <div className="flex items-center gap-2">
-                          <Switch
-                            checked={memory.is_active}
-                            onCheckedChange={() =>
-                              handleToggleMemory(memory.id, memory.is_active)
-                            }
-                          />
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => handleDeleteMemory(memory.id)}
-                            className="text-muted-foreground hover:text-destructive"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
+                      ) : (
+                        <div className="flex items-start justify-between gap-4">
+                          <div className="flex-1">
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <h4 className="font-medium">{memory.title}</h4>
+                              <Badge variant="outline" className="text-xs">
+                                {getCategoryLabel(memory.category)}
+                              </Badge>
+                              {memory.is_active ? (
+                                <span className="flex items-center gap-1 text-xs text-green-500">
+                                  <CheckCircle2 className="h-3 w-3" />
+                                  Ativa
+                                </span>
+                              ) : (
+                                <span className="flex items-center gap-1 text-xs text-muted-foreground">
+                                  <XCircle className="h-3 w-3" />
+                                  Inativa
+                                </span>
+                              )}
+                            </div>
+                            <p className="mt-1 text-sm text-muted-foreground line-clamp-2">
+                              {memory.content}
+                            </p>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => startEditing(memory)}
+                              className="text-muted-foreground hover:text-primary"
+                            >
+                              <Pencil className="h-4 w-4" />
+                            </Button>
+                            <Switch
+                              checked={memory.is_active}
+                              onCheckedChange={() =>
+                                handleToggleMemory(memory.id, memory.is_active)
+                              }
+                            />
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => handleDeleteMemory(memory.id)}
+                              className="text-muted-foreground hover:text-destructive"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
                         </div>
-                      </div>
+                      )}
                     </CardContent>
                   </Card>
                 ))}

@@ -100,6 +100,34 @@ export function useToggleMemory() {
   });
 }
 
+export function useUpdateMemory() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({
+      id,
+      title,
+      content,
+      category,
+    }: {
+      id: string;
+      title: string;
+      content: string;
+      category: string;
+    }) => {
+      const { error } = await supabase
+        .from("ai_memories")
+        .update({ title, content, category })
+        .eq("id", id);
+
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["ai-memories"] });
+    },
+  });
+}
+
 export function useDeleteMemory() {
   const queryClient = useQueryClient();
 

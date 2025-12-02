@@ -6,7 +6,7 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-const systemPrompt = `You are a professional web developer. Generate a complete, modern website with multiple files.
+const baseSystemPrompt = `You are a professional web developer. Generate a complete, modern website with multiple files.
 
 IMPORTANT: Return ONLY a valid JSON object with the following structure:
 {
@@ -53,6 +53,25 @@ SECTIONS TO INCLUDE (based on briefing):
 
 Make the design professional, modern, and visually appealing with proper spacing, typography, and visual hierarchy.`;
 
+async function fetchActiveMemories(supabase: any): Promise<string> {
+  try {
+    const { data, error } = await supabase
+      .from("ai_memories")
+      .select("title, content, type")
+      .eq("is_active", true);
+
+    if (error || !data || data.length === 0) return "";
+
+    const memoryContext = data
+      .map((m: any) => `[${m.type.toUpperCase()}] ${m.title}: ${m.content}`)
+      .join("\n\n");
+
+    return `\n\n## AI KNOWLEDGE BASE (Use these instructions/preferences when generating):\n${memoryContext}`;
+  } catch {
+    return "";
+  }
+}
+
 const editSystemPrompt = `You are a professional web developer. Modify the existing website files based on user instructions.
 
 IMPORTANT: Return ONLY a valid JSON object with ALL files (modified and unmodified):
@@ -91,13 +110,25 @@ serve(async (req) => {
       throw new Error("LOVABLE_API_KEY is not configured");
     }
 
+    // Initialize Supabase client for fetching memories
+    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+    const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const supabase = createClient(supabaseUrl, supabaseKey);
+
+    // Fetch active AI memories
+    const memoryContext = await fetchActiveMemories(supabase);
+    console.log("Memory context loaded:", memoryContext ? "yes" : "no");
+
+    // Build system prompt with memories
+    const systemPrompt = baseSystemPrompt + memoryContext;
+
     // Build messages array
     const messages = [];
 
     if (editMode && currentFiles) {
       messages.push({
         role: "system",
-        content: editSystemPrompt,
+        content: editSystemPrompt + memoryContext,
       });
       messages.push({
         role: "user",
@@ -170,9 +201,6 @@ serve(async (req) => {
 
     // Save files to database
     if (projectId) {
-      const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-      const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-      const supabase = createClient(supabaseUrl, supabaseKey);
 
       // Delete existing files for this project
       await supabase.from("project_files").delete().eq("project_id", projectId);

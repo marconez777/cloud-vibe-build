@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
 import {
   Brain,
   Upload,
@@ -13,48 +14,68 @@ import {
   Plus,
   Save,
   Sparkles,
+  Loader2,
+  CheckCircle2,
+  XCircle,
 } from "lucide-react";
 import { toast } from "sonner";
-
-interface Memory {
-  id: string;
-  title: string;
-  content: string;
-  type: 'instruction' | 'example' | 'context';
-  createdAt: Date;
-}
+import {
+  useAIMemories,
+  useCreateMemory,
+  useDeleteMemory,
+  useToggleMemory,
+} from "@/hooks/useAIMemories";
 
 export default function Knowledge() {
-  const [memories, setMemories] = useState<Memory[]>([]);
+  const { data: memories, isLoading } = useAIMemories();
+  const createMemory = useCreateMemory();
+  const deleteMemory = useDeleteMemory();
+  const toggleMemory = useToggleMemory();
+
   const [newTitle, setNewTitle] = useState("");
   const [newContent, setNewContent] = useState("");
   const [showForm, setShowForm] = useState(false);
 
-  const addMemory = () => {
+  const handleAddMemory = async () => {
     if (!newTitle.trim() || !newContent.trim()) {
       toast.error("Preencha todos os campos");
       return;
     }
 
-    const memory: Memory = {
-      id: Date.now().toString(),
-      title: newTitle,
-      content: newContent,
-      type: 'instruction',
-      createdAt: new Date(),
-    };
-
-    setMemories([...memories, memory]);
-    setNewTitle("");
-    setNewContent("");
-    setShowForm(false);
-    toast.success("Memória adicionada!");
+    try {
+      await createMemory.mutateAsync({
+        title: newTitle,
+        content: newContent,
+        type: "instruction",
+      });
+      setNewTitle("");
+      setNewContent("");
+      setShowForm(false);
+      toast.success("Memória adicionada!");
+    } catch {
+      toast.error("Erro ao adicionar memória");
+    }
   };
 
-  const deleteMemory = (id: string) => {
-    setMemories(memories.filter((m) => m.id !== id));
-    toast.success("Memória removida");
+  const handleDeleteMemory = async (id: string) => {
+    try {
+      await deleteMemory.mutateAsync(id);
+      toast.success("Memória removida");
+    } catch {
+      toast.error("Erro ao remover memória");
+    }
   };
+
+  const handleToggleMemory = async (id: string, isActive: boolean) => {
+    try {
+      await toggleMemory.mutateAsync({ id, is_active: !isActive });
+      toast.success(isActive ? "Memória desativada" : "Memória ativada");
+    } catch {
+      toast.error("Erro ao atualizar memória");
+    }
+  };
+
+  const activeCount = memories?.filter((m) => m.is_active).length || 0;
 
   return (
     <AppLayout>
@@ -67,10 +88,18 @@ export default function Knowledge() {
               Treine a IA com informações específicas do seu negócio
             </p>
           </div>
-          <Button variant="hero" onClick={() => setShowForm(true)}>
-            <Plus className="mr-2 h-4 w-4" />
-            Adicionar Memória
-          </Button>
+          <div className="flex items-center gap-4">
+            {activeCount > 0 && (
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <CheckCircle2 className="h-4 w-4 text-green-500" />
+                {activeCount} memória(s) ativa(s)
+              </div>
+            )}
+            <Button variant="hero" onClick={() => setShowForm(true)}>
+              <Plus className="mr-2 h-4 w-4" />
+              Adicionar Memória
+            </Button>
+          </div>
         </div>
 
         <div className="grid gap-8 lg:grid-cols-3">
@@ -101,8 +130,16 @@ export default function Knowledge() {
                     />
                   </div>
                   <div className="flex gap-2">
-                    <Button variant="hero" onClick={addMemory}>
-                      <Save className="mr-2 h-4 w-4" />
+                    <Button
+                      variant="hero"
+                      onClick={handleAddMemory}
+                      disabled={createMemory.isPending}
+                    >
+                      {createMemory.isPending ? (
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      ) : (
+                        <Save className="mr-2 h-4 w-4" />
+                      )}
                       Salvar
                     </Button>
                     <Button variant="ghost" onClick={() => setShowForm(false)}>
@@ -137,27 +174,56 @@ export default function Knowledge() {
             </Card>
 
             {/* Memories list */}
-            {memories.length > 0 ? (
+            {isLoading ? (
+              <div className="flex items-center justify-center p-8">
+                <Loader2 className="h-8 w-8 animate-spin text-primary" />
+              </div>
+            ) : memories && memories.length > 0 ? (
               <div className="space-y-4">
                 <h3 className="font-heading font-semibold">Memórias Salvas</h3>
                 {memories.map((memory) => (
-                  <Card key={memory.id} variant="glass" className="animate-fade-in">
+                  <Card
+                    key={memory.id}
+                    variant="glass"
+                    className={`animate-fade-in ${!memory.is_active ? "opacity-60" : ""}`}
+                  >
                     <CardContent className="p-4">
                       <div className="flex items-start justify-between gap-4">
                         <div className="flex-1">
-                          <h4 className="font-medium">{memory.title}</h4>
+                          <div className="flex items-center gap-2">
+                            <h4 className="font-medium">{memory.title}</h4>
+                            {memory.is_active ? (
+                              <span className="flex items-center gap-1 text-xs text-green-500">
+                                <CheckCircle2 className="h-3 w-3" />
+                                Ativa
+                              </span>
+                            ) : (
+                              <span className="flex items-center gap-1 text-xs text-muted-foreground">
+                                <XCircle className="h-3 w-3" />
+                                Inativa
+                              </span>
+                            )}
+                          </div>
                           <p className="mt-1 text-sm text-muted-foreground line-clamp-2">
                             {memory.content}
                           </p>
                         </div>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => deleteMemory(memory.id)}
-                          className="text-muted-foreground hover:text-destructive"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
+                        <div className="flex items-center gap-2">
+                          <Switch
+                            checked={memory.is_active}
+                            onCheckedChange={() =>
+                              handleToggleMemory(memory.id, memory.is_active)
+                            }
+                          />
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => handleDeleteMemory(memory.id)}
+                            className="text-muted-foreground hover:text-destructive"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
                       </div>
                     </CardContent>
                   </Card>
@@ -192,8 +258,10 @@ export default function Knowledge() {
                   A base de conhecimento permite que você treine a IA com informações específicas.
                 </p>
                 <p>
-                  Adicione instruções, exemplos de código, padrões de design, ou qualquer informação
-                  que a IA deva considerar ao gerar seus sites.
+                  As memórias <strong>ativas</strong> são incluídas automaticamente quando a IA gera ou edita seu site.
+                </p>
+                <p>
+                  Use o toggle para ativar/desativar memórias sem precisar deletá-las.
                 </p>
               </CardContent>
             </Card>
@@ -208,6 +276,15 @@ export default function Knowledge() {
                   <li>• Exemplos de sites que você gosta</li>
                   <li>• Regras de negócio específicas</li>
                 </ul>
+              </CardContent>
+            </Card>
+
+            <Card variant="glass" className="bg-primary/5 border-primary/20">
+              <CardContent className="p-4">
+                <h4 className="font-semibold text-sm mb-2 text-primary">Dica Pro</h4>
+                <p className="text-xs text-muted-foreground">
+                  Adicione instruções como "Sempre use o tom formal" ou "Inclua botão de WhatsApp em todos os sites" para personalizar automaticamente todas as gerações.
+                </p>
               </CardContent>
             </Card>
           </div>

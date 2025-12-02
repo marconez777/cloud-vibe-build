@@ -1,9 +1,31 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
+
+// Fetch active memories for Design Analyst
+async function fetchDesignAnalystMemories() {
+  const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+  const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+  const supabase = createClient(supabaseUrl, supabaseKey);
+
+  const { data, error } = await supabase
+    .from("ai_memories")
+    .select("title, content")
+    .or("agent.eq.design_analyst,agent.eq.all")
+    .eq("is_active", true)
+    .order("priority", { ascending: false });
+
+  if (error) {
+    console.error("Error fetching memories:", error);
+    return [];
+  }
+
+  return data || [];
+}
 
 const designAnalystPrompt = `You are a DESIGN ANALYST AI specialized in extracting precise design specifications from reference images and business context.
 
@@ -146,16 +168,28 @@ serve(async (req) => {
     console.log("Design Analyst: Analyzing briefing...");
     console.log("Has reference images:", !!referenceImages?.length);
 
+    // Fetch agent-specific memories
+    const memories = await fetchDesignAnalystMemories();
+    console.log(`Loaded ${memories.length} memories for Design Analyst`);
+    
+    const memoryContext = memories.length > 0
+      ? "\n\n## ADDITIONAL INSTRUCTIONS FROM KNOWLEDGE BASE:\n" +
+        memories.map((m) => `### ${m.title}\n${m.content}`).join("\n\n")
+      : "";
+
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) {
       throw new Error("LOVABLE_API_KEY is not configured");
     }
 
+    // Build system prompt with memories
+    const fullSystemPrompt = designAnalystPrompt + memoryContext;
+
     // Build messages with vision support if images provided
     const messages: any[] = [
       {
         role: "system",
-        content: designAnalystPrompt,
+        content: fullSystemPrompt,
       },
     ];
 

@@ -1,12 +1,15 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 
+export type AgentType = "design_analyst" | "code_generator" | "all";
+
 export interface AIMemory {
   id: string;
   title: string;
   content: string;
   type: string;
   category: string;
+  agent: AgentType;
   is_active: boolean;
   is_system: boolean;
   priority: number;
@@ -22,6 +25,24 @@ export const MEMORY_CATEGORIES = [
   { value: "estilo", label: "Estilo" },
   { value: "business", label: "Negócio" },
 ] as const;
+
+export const AGENT_INFO = {
+  design_analyst: {
+    name: "Design Analyst",
+    description: "Analisa imagens e define cores, fontes, layout",
+    color: "violet",
+  },
+  code_generator: {
+    name: "Code Generator",
+    description: "Gera HTML, CSS e JavaScript",
+    color: "cyan",
+  },
+  all: {
+    name: "Compartilhadas",
+    description: "Usadas por todos os agentes",
+    color: "emerald",
+  },
+} as const;
 
 export function useAIMemories() {
   return useQuery({
@@ -88,6 +109,44 @@ export function useActiveMemories() {
   });
 }
 
+export function useMemoriesByAgent(agent: AgentType) {
+  return useQuery({
+    queryKey: ["ai-memories", "agent", agent],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("ai_memories")
+        .select("*")
+        .or(`agent.eq.${agent},agent.eq.all`)
+        .eq("is_active", true)
+        .order("priority", { ascending: false });
+
+      if (error) throw error;
+      return data as AIMemory[];
+    },
+  });
+}
+
+export function useMemoriesFilteredByAgent(agent: AgentType | "all_agents") {
+  return useQuery({
+    queryKey: ["ai-memories", "filter", agent],
+    queryFn: async () => {
+      let query = supabase
+        .from("ai_memories")
+        .select("*")
+        .order("priority", { ascending: false })
+        .order("created_at", { ascending: false });
+
+      if (agent !== "all_agents") {
+        query = query.eq("agent", agent);
+      }
+
+      const { data, error } = await query;
+      if (error) throw error;
+      return data as AIMemory[];
+    },
+  });
+}
+
 export function useCreateMemory() {
   const queryClient = useQueryClient();
 
@@ -98,16 +157,18 @@ export function useCreateMemory() {
       type = "instruction",
       category = "general",
       priority = 0,
+      agent = "all",
     }: {
       title: string;
       content: string;
       type?: string;
       category?: string;
       priority?: number;
+      agent?: AgentType;
     }) => {
       const { data, error } = await supabase
         .from("ai_memories")
-        .insert({ title, content, type, category, priority, is_system: false })
+        .insert({ title, content, type, category, priority, agent, is_system: false })
         .select()
         .single();
 
@@ -147,15 +208,20 @@ export function useUpdateMemory() {
       title,
       content,
       category,
+      agent,
     }: {
       id: string;
       title: string;
       content: string;
       category: string;
+      agent?: AgentType;
     }) => {
+      const updateData: any = { title, content, category };
+      if (agent) updateData.agent = agent;
+
       const { error } = await supabase
         .from("ai_memories")
-        .update({ title, content, category })
+        .update(updateData)
         .eq("id", id);
 
       if (error) throw error;

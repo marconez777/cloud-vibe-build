@@ -262,20 +262,28 @@ Make the design EXACTLY match the provided design specifications. Do not deviate
 
 async function fetchActiveMemories(supabase: any): Promise<string> {
   try {
+    // Fetch memories specifically for code_generator agent or shared (all)
     const { data, error } = await supabase
       .from("ai_memories")
-      .select("title, content, type, category, priority")
+      .select("title, content, type, category, priority, agent")
       .eq("is_active", true)
+      .or("agent.eq.code_generator,agent.eq.all")
       .order("priority", { ascending: false });
 
-    if (error || !data || data.length === 0) return "";
+    if (error || !data || data.length === 0) {
+      console.log("No memories found for Code Generator agent");
+      return "";
+    }
+
+    console.log(`Loaded ${data.length} memories for Code Generator agent`);
 
     const memoryContext = data
       .map((m: any) => `[${m.category?.toUpperCase() || m.type.toUpperCase()}] ${m.title}:\n${m.content}`)
       .join("\n\n---\n\n");
 
-    return `\n\n## AI KNOWLEDGE BASE:\n\n${memoryContext}`;
-  } catch {
+    return `\n\n## AI KNOWLEDGE BASE (CODE GENERATOR):\n\n${memoryContext}`;
+  } catch (e) {
+    console.error("Error fetching memories:", e);
     return "";
   }
 }

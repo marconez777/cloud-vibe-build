@@ -6,10 +6,20 @@ export interface AIMemory {
   title: string;
   content: string;
   type: string;
+  category: string;
   is_active: boolean;
   created_at: string;
   updated_at: string;
 }
+
+export const MEMORY_CATEGORIES = [
+  { value: "general", label: "Geral" },
+  { value: "branding", label: "Branding" },
+  { value: "content", label: "Conteúdo" },
+  { value: "structure", label: "Estrutura" },
+  { value: "style", label: "Estilo" },
+  { value: "business", label: "Negócio" },
+] as const;
 
 export function useAIMemories() {
   return useQuery({
@@ -50,14 +60,16 @@ export function useCreateMemory() {
       title,
       content,
       type = "instruction",
+      category = "general",
     }: {
       title: string;
       content: string;
       type?: string;
+      category?: string;
     }) => {
       const { data, error } = await supabase
         .from("ai_memories")
-        .insert({ title, content, type })
+        .insert({ title, content, type, category })
         .select()
         .single();
 

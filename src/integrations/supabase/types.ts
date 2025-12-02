@@ -16,6 +16,7 @@ export type Database = {
     Tables: {
       ai_memories: {
         Row: {
+          category: string | null
           content: string
           created_at: string
           id: string
@@ -25,6 +26,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          category?: string | null
           content: string
           created_at?: string
           id?: string
@@ -34,6 +36,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          category?: string | null
           content?: string
           created_at?: string
           id?: string

@@ -34,6 +34,27 @@ async function fetchSEOMemories(supabase: any): Promise<string> {
   }
 }
 
+// Fetch custom system prompt from ai_agents table
+async function fetchCustomAgentPrompt(supabase: any, agentSlug: string): Promise<string> {
+  try {
+    const { data, error } = await supabase
+      .from("ai_agents")
+      .select("system_prompt")
+      .eq("slug", agentSlug)
+      .eq("is_active", true)
+      .single();
+
+    if (error || !data?.system_prompt) {
+      return "";
+    }
+
+    console.log(`Custom system prompt found for ${agentSlug}`);
+    return `\n\n## CUSTOM AGENT INSTRUCTIONS:\n${data.system_prompt}`;
+  } catch (e) {
+    return "";
+  }
+}
+
 const seoSystemPrompt = `You are an expert SEO SPECIALIST agent. Your ONLY job is to review and optimize website files for perfect SEO.
 
 ## YOUR RESPONSIBILITIES:
@@ -243,11 +264,12 @@ serve(async (req) => {
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    // Fetch SEO-specific memories
+    // Fetch SEO-specific memories and custom prompt
     const memoryContext = await fetchSEOMemories(supabase);
+    const customPrompt = await fetchCustomAgentPrompt(supabase, "seo_specialist");
     console.log("SEO Memory context loaded:", memoryContext ? "yes" : "no");
 
-    const fullPrompt = seoSystemPrompt + memoryContext;
+    const fullPrompt = seoSystemPrompt + memoryContext + customPrompt;
 
     const userMessage = `Optimize these website files for perfect SEO:
 

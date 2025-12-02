@@ -237,6 +237,27 @@ async function fetchActiveMemories(supabase: any): Promise<string> {
   }
 }
 
+// Fetch custom system prompt from ai_agents table
+async function fetchCustomAgentPrompt(supabase: any, agentSlug: string): Promise<string> {
+  try {
+    const { data, error } = await supabase
+      .from("ai_agents")
+      .select("system_prompt")
+      .eq("slug", agentSlug)
+      .eq("is_active", true)
+      .single();
+
+    if (error || !data?.system_prompt) {
+      return "";
+    }
+
+    console.log(`Custom system prompt found for ${agentSlug}`);
+    return `\n\n## CUSTOM AGENT INSTRUCTIONS:\n${data.system_prompt}`;
+  } catch (e) {
+    return "";
+  }
+}
+
 async function analyzeDesign(briefing: string, referenceImages?: string[]): Promise<any> {
   const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
   const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;

@@ -28,6 +28,27 @@ async function fetchDesignAnalystMemories() {
   return data || [];
 }
 
+// Fetch custom system prompt from ai_agents table
+async function fetchCustomAgentPrompt(agentSlug: string) {
+  const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+  const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+  const supabase = createClient(supabaseUrl, supabaseKey);
+
+  const { data, error } = await supabase
+    .from("ai_agents")
+    .select("system_prompt")
+    .eq("slug", agentSlug)
+    .eq("is_active", true)
+    .single();
+
+  if (error || !data?.system_prompt) {
+    return "";
+  }
+
+  console.log(`Custom system prompt found for ${agentSlug}`);
+  return `\n\n## CUSTOM AGENT INSTRUCTIONS:\n${data.system_prompt}`;
+}
+
 const designAnalystPrompt = `You are a DESIGN ANALYST AI specialized in extracting precise design specifications from reference images and business context.
 
 Your job is to analyze the provided reference images (if any) and the business briefing to create a DETAILED DESIGN SPECIFICATION that will guide a code generator.
@@ -189,8 +210,9 @@ serve(async (req) => {
       throw new Error("OPENAI_API_KEY is not configured");
     }
 
-    // Build system prompt with memories
-    const fullSystemPrompt = designAnalystPrompt + memoryContext;
+    // Build system prompt with memories and custom prompt
+    const customPrompt = await fetchCustomAgentPrompt("design_analyst");
+    const fullSystemPrompt = designAnalystPrompt + memoryContext + customPrompt;
 
     // Build messages with vision support if images provided
     const messages: any[] = [

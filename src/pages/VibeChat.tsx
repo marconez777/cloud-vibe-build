@@ -4,7 +4,7 @@ import { AppLayout } from "@/components/layout/AppLayout";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Send,
   Loader2,
@@ -18,13 +18,14 @@ import {
 } from "lucide-react";
 import { ExportOptionsDialog, ExportOptions } from "@/components/export/ExportOptionsDialog";
 import { useProject } from "@/hooks/useProjects";
-import { useProjectFiles, useDeleteProjectFiles } from "@/hooks/useProjectFiles";
+import { useProjectFiles } from "@/hooks/useProjectFiles";
 import { useChatMessages, useSaveChatMessage, useClearChatHistory } from "@/hooks/useChatMessages";
 import { FileExplorer } from "@/components/file-explorer/FileExplorer";
-import { FilePreview } from "@/components/file-explorer/FilePreview";
+import { ResponsivePreview } from "@/components/file-explorer/ResponsivePreview";
 import { ChatHeader } from "@/components/chat/ChatHeader";
 import { MessageBubble } from "@/components/chat/MessageBubble";
-import { GenerationProgress } from "@/components/chat/GenerationProgress";
+import { EnhancedGenerationProgress } from "@/components/chat/EnhancedGenerationProgress";
+import { useGenerationStatus } from "@/hooks/useGenerationStatus";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -49,12 +50,21 @@ export default function VibeChat() {
   
   const [localMessages, setLocalMessages] = useState<LocalMessage[]>([]);
   const [input, setInput] = useState("");
-  const [isGenerating, setIsGenerating] = useState(false);
   const [activeTab, setActiveTab] = useState<"preview" | "files">("preview");
   const scrollRef = useRef<HTMLDivElement>(null);
   const [initialized, setInitialized] = useState(false);
   const [exportDialogOpen, setExportDialogOpen] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
+  
+  const {
+    status: generationStatus,
+    isGenerating,
+    startGeneration,
+    updateStage,
+    completeGeneration,
+    setError,
+    reset: resetGeneration,
+  } = useGenerationStatus();
 
   const hasFiles = files && files.length > 0;
 
@@ -119,7 +129,7 @@ export default function VibeChat() {
   const generateFiles = async (userMessage?: string) => {
     if (isGenerating || !projectId) return;
 
-    setIsGenerating(true);
+    startGeneration();
     const isEditMode = hasFiles && !!userMessage;
 
     if (userMessage) {
@@ -139,14 +149,12 @@ export default function VibeChat() {
       });
     }
 
-    const thinkingMsg: LocalMessage = {
-      id: `thinking-${Date.now()}`,
-      role: "assistant",
-      content: isEditMode ? "Modificando arquivos..." : "Gerando arquivos do site...",
-      timestamp: new Date(),
-      isThinking: true,
-    };
-    setLocalMessages((prev) => [...prev, thinkingMsg]);
+    // Update stage based on mode
+    if (isEditMode) {
+      updateStage("code_generator", "Modificando arquivos...");
+    } else {
+      updateStage("design_analyst", "Design Analyst analisando...");
+    }
 
     try {
       const currentFiles = files?.map((f) => ({
@@ -155,6 +163,13 @@ export default function VibeChat() {
         type: f.file_type,
         content: f.content,
       }));
+
+      // Simulate pipeline stages for visual feedback
+      if (!isEditMode) {
+        globalThis.setTimeout(() => updateStage("code_generator"), 8000);
+        globalThis.setTimeout(() => updateStage("seo_specialist"), 20000);
+        globalThis.setTimeout(() => updateStage("saving"), 35000);
+      }
 
       const { data, error } = await supabase.functions.invoke("generate-files", {
         body: {
@@ -168,11 +183,11 @@ export default function VibeChat() {
 
       if (error) throw error;
 
-      setLocalMessages((prev) => prev.filter((m) => !m.id.startsWith("thinking")));
-
       if (data.success) {
         await refetchFiles();
         queryClient.invalidateQueries({ queryKey: ["project", projectId] });
+
+        completeGeneration();
 
         const successContent = isEditMode
           ? `${data.files?.length || 0} arquivo(s) atualizado(s)! Veja o preview ou explore os arquivos.`
@@ -199,7 +214,9 @@ export default function VibeChat() {
       }
     } catch (error) {
       console.error("Error generating files:", error);
-      setLocalMessages((prev) => prev.filter((m) => !m.id.startsWith("thinking")));
+      
+      const errorMessage = error instanceof Error ? error.message : "Erro desconhecido";
+      setError(errorMessage);
 
       const errorContent = "Ocorreu um erro ao processar. Por favor, tente novamente.";
       const errorMsg: LocalMessage = {
@@ -210,8 +227,9 @@ export default function VibeChat() {
       };
       setLocalMessages((prev) => [...prev, errorMsg]);
       toast.error("Erro ao processar");
-    } finally {
-      setIsGenerating(false);
+      
+      // Reset after showing error
+      globalThis.setTimeout(() => resetGeneration(), 5000);
     }
   };
 
@@ -348,7 +366,13 @@ export default function VibeChat() {
               ))}
               
               {isGenerating && (
-                <GenerationProgress isGenerating={isGenerating} editMode={hasFiles} />
+                <EnhancedGenerationProgress 
+                  stage={generationStatus.stage}
+                  message={generationStatus.message}
+                  progress={generationStatus.progress}
+                  error={generationStatus.error}
+                  startTime={generationStatus.startTime}
+                />
               )}
             </div>
           </ScrollArea>
@@ -428,10 +452,10 @@ export default function VibeChat() {
           {/* Content */}
           <div className="flex-1 min-h-0 overflow-hidden bg-muted/30 p-4">
             {activeTab === "preview" ? (
-              <div className="h-full rounded-lg border border-border bg-background shadow-lg overflow-hidden">
-                {hasFiles ? (
-                  <FilePreview files={files} />
-                ) : (
+              hasFiles ? (
+                <ResponsivePreview files={files} />
+              ) : (
+                <div className="h-full rounded-lg border border-border bg-background shadow-lg overflow-hidden">
                   <div className="flex h-full flex-col items-center justify-center gap-4 p-8 text-center">
                     <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-primary/10">
                       <Eye className="h-8 w-8 text-primary" />
@@ -443,8 +467,8 @@ export default function VibeChat() {
                       </p>
                     </div>
                   </div>
-                )}
-              </div>
+                </div>
+              )
             ) : (
               <div className="h-full rounded-lg border border-border bg-background shadow-lg overflow-hidden">
                 {hasFiles ? (

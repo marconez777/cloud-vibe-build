@@ -93,7 +93,7 @@ export function AppSidebar({ collapsed, onToggle }: AppSidebarProps) {
             <div className="border-t border-sidebar-border p-4">
               <div className="glass rounded-lg p-4">
                 <p className="text-xs text-muted-foreground">Powered by AI</p>
-                <p className="mt-1 text-sm font-medium text-foreground">Gemini 2.5 Flash</p>
+                <p className="mt-1 text-sm font-medium text-foreground">OpenAI GPT-4o</p>
               </div>
             </div>
           )}

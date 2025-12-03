@@ -580,6 +580,71 @@ serve(async (req) => {
         seoApplied = seoResult.applied;
         console.log("SEO optimizations applied:", seoApplied);
       }
+
+      // Step 5: Generate SEO auxiliary files (robots.txt, sitemap.xml)
+      console.log("Step 5: Generating SEO auxiliary files...");
+      
+      // Get site URL from settings or use placeholder
+      const siteUrl = projectSettings?.custom_fields?.seo?.canonical_url || "https://www.seusite.com.br";
+      const companyName = projectSettings?.company_name || "Site";
+      
+      // Generate robots.txt
+      const customRobots = projectSettings?.custom_fields?.seo?.custom_robots;
+      const robotsContent = customRobots || `# robots.txt for ${companyName}
+User-agent: *
+Allow: /
+Disallow: /admin/
+Disallow: /api/
+Disallow: /*.json$
+
+# Sitemap
+Sitemap: ${siteUrl}/sitemap.xml
+
+# Crawl-delay (optional, for politeness)
+Crawl-delay: 1`;
+
+      finalFiles.push({
+        path: "robots.txt",
+        name: "robots.txt",
+        type: "txt",
+        content: robotsContent,
+      });
+
+      // Generate sitemap.xml
+      const htmlFiles = finalFiles.filter((f: any) => f.type === "html");
+      const today = new Date().toISOString().split("T")[0];
+      
+      let sitemapContent = `<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.sitemaps.org/schemas/sitemap/0.9
+        http://www.sitemaps.org/schemas/sitemap/0.9/sitemap.xsd">
+`;
+      
+      htmlFiles.forEach((file: any, index: number) => {
+        const pagePath = file.path === "index.html" ? "" : file.path.replace(".html", "");
+        const priority = file.path === "index.html" ? "1.0" : "0.8";
+        const changefreq = file.path === "index.html" ? "weekly" : "monthly";
+        
+        sitemapContent += `  <url>
+    <loc>${siteUrl}/${pagePath}</loc>
+    <lastmod>${today}</lastmod>
+    <changefreq>${changefreq}</changefreq>
+    <priority>${priority}</priority>
+  </url>
+`;
+      });
+      
+      sitemapContent += `</urlset>`;
+      
+      finalFiles.push({
+        path: "sitemap.xml",
+        name: "sitemap.xml",
+        type: "xml",
+        content: sitemapContent,
+      });
+
+      console.log("SEO auxiliary files generated: robots.txt, sitemap.xml");
     }
 
     // Save files to database

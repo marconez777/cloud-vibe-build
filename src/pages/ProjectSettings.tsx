@@ -13,7 +13,8 @@ import {
   Share2,
   Clock,
   Settings2,
-  Sparkles
+  Sparkles,
+  Search
 } from "lucide-react";
 import { useProjects } from "@/hooks/useProjects";
 import { 
@@ -26,6 +27,7 @@ import { ContactTab } from "@/components/settings/ContactTab";
 import { SocialTab } from "@/components/settings/SocialTab";
 import { HoursTab } from "@/components/settings/HoursTab";
 import { CustomFieldsTab } from "@/components/settings/CustomFieldsTab";
+import { SeoTab } from "@/components/settings/SeoTab";
 
 export default function ProjectSettings() {
   const { projectId } = useParams<{ projectId: string }>();
@@ -142,7 +144,7 @@ export default function ProjectSettings() {
         <div className="flex-1 overflow-y-auto p-6">
           <div className="mx-auto max-w-3xl">
             <Tabs defaultValue="identity" className="space-y-6">
-              <TabsList className="grid w-full grid-cols-5">
+              <TabsList className="grid w-full grid-cols-6">
                 <TabsTrigger value="identity" className="gap-2">
                   <Palette className="h-4 w-4" />
                   <span className="hidden sm:inline">Identidade</span>
@@ -158,6 +160,10 @@ export default function ProjectSettings() {
                 <TabsTrigger value="hours" className="gap-2">
                   <Clock className="h-4 w-4" />
                   <span className="hidden sm:inline">Horários</span>
+                </TabsTrigger>
+                <TabsTrigger value="seo" className="gap-2">
+                  <Search className="h-4 w-4" />
+                  <span className="hidden sm:inline">SEO</span>
                 </TabsTrigger>
                 <TabsTrigger value="custom" className="gap-2">
                   <Settings2 className="h-4 w-4" />
@@ -183,6 +189,10 @@ export default function ProjectSettings() {
 
               <TabsContent value="hours">
                 <HoursTab settings={settings} onChange={handleChange} />
+              </TabsContent>
+
+              <TabsContent value="seo">
+                <SeoTab settings={settings} onChange={handleChange} />
               </TabsContent>
 
               <TabsContent value="custom">

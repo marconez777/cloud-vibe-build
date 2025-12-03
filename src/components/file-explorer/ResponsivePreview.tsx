@@ -8,6 +8,8 @@ import { PageSelector } from "./PageSelector";
 
 interface ResponsivePreviewProps {
   files: ProjectFile[];
+  currentPage?: string;
+  onPageChange?: (page: string) => void;
 }
 
 type ViewportSize = "desktop" | "tablet" | "mobile";
@@ -18,9 +20,14 @@ const viewportSizes: Record<ViewportSize, { width: number; label: string; icon: 
   mobile: { width: 375, label: "Mobile", icon: Smartphone },
 };
 
-export function ResponsivePreview({ files }: ResponsivePreviewProps) {
+export function ResponsivePreview({ files, currentPage: externalPage, onPageChange }: ResponsivePreviewProps) {
   const [viewport, setViewport] = useState<ViewportSize>("desktop");
-  const [currentPage, setCurrentPage] = useState<string>("index.html");
+  const [internalPage, setInternalPage] = useState<string>("index.html");
+  
+  // Use external control if provided, otherwise internal state
+  const currentPage = externalPage ?? internalPage;
+  const setCurrentPage = onPageChange ?? setInternalPage;
+  
   const currentViewport = viewportSizes[viewport];
 
   const handleNavigate = useCallback((page: string) => {

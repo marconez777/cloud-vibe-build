@@ -52,6 +52,7 @@ export default function VibeChat() {
   const [localMessages, setLocalMessages] = useState<LocalMessage[]>([]);
   const [input, setInput] = useState("");
   const [activeTab, setActiveTab] = useState<"preview" | "files">("preview");
+  const [previewPage, setPreviewPage] = useState<string>("index.html");
   const scrollRef = useRef<HTMLDivElement>(null);
   const [initialized, setInitialized] = useState(false);
   const [exportDialogOpen, setExportDialogOpen] = useState(false);
@@ -479,9 +480,13 @@ export default function VibeChat() {
 
           {/* Content */}
           <div className="flex-1 min-h-0 overflow-hidden bg-muted/30 p-4">
-            {activeTab === "preview" ? (
+          {activeTab === "preview" ? (
               hasFiles ? (
-                <ResponsivePreview files={files} />
+                <ResponsivePreview 
+                  files={files} 
+                  currentPage={previewPage}
+                  onPageChange={setPreviewPage}
+                />
               ) : (
                 <div className="h-full rounded-lg border border-border bg-background shadow-lg overflow-hidden">
                   <div className="flex h-full flex-col items-center justify-center gap-4 p-8 text-center">
@@ -500,7 +505,14 @@ export default function VibeChat() {
             ) : (
               <div className="h-full rounded-lg border border-border bg-background shadow-lg overflow-hidden">
                 {hasFiles ? (
-                  <FileExplorer projectId={projectId!} />
+                  <FileExplorer 
+                    projectId={projectId!}
+                    previewPage={previewPage}
+                    onPreviewPage={(path) => {
+                      setPreviewPage(path);
+                      setActiveTab("preview");
+                    }}
+                  />
                 ) : (
                   <div className="flex h-full flex-col items-center justify-center gap-4 p-8 text-center">
                     <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-primary/10">

@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
+import { Progress } from "@/components/ui/progress";
 import {
   Select,
   SelectContent,
@@ -33,6 +34,8 @@ export function ThemeUpload({ open, onOpenChange }: ThemeUploadProps) {
   const [description, setDescription] = useState("");
   const [category, setCategory] = useState("general");
   const [tags, setTags] = useState("");
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const [isUploading, setIsUploading] = useState(false);
 
   const { toast } = useToast();
   const createTheme = useCreateTheme();
@@ -88,8 +91,14 @@ export function ThemeUpload({ open, onOpenChange }: ThemeUploadProps) {
     formData.append("category", category);
     formData.append("tags", tags);
 
+    setIsUploading(true);
+    setUploadProgress(0);
+
     try {
-      await createTheme.mutateAsync(formData);
+      await createTheme.mutateAsync({
+        formData,
+        onProgress: (progress) => setUploadProgress(progress),
+      });
       toast({
         title: "Sucesso",
         description: "Tema importado com sucesso!",
@@ -101,6 +110,9 @@ export function ThemeUpload({ open, onOpenChange }: ThemeUploadProps) {
         description: error.message || "Tente novamente",
         variant: "destructive",
       });
+    } finally {
+      setIsUploading(false);
+      setUploadProgress(0);
     }
   };
 
@@ -110,6 +122,8 @@ export function ThemeUpload({ open, onOpenChange }: ThemeUploadProps) {
     setDescription("");
     setCategory("general");
     setTags("");
+    setUploadProgress(0);
+    setIsUploading(false);
     onOpenChange(false);
   };
 
@@ -214,19 +228,30 @@ export function ThemeUpload({ open, onOpenChange }: ThemeUploadProps) {
             />
           </div>
 
+          {/* Upload Progress */}
+          {isUploading && (
+            <div className="space-y-2">
+              <div className="flex justify-between text-sm">
+                <span className="text-muted-foreground">Enviando arquivo...</span>
+                <span className="font-medium">{uploadProgress}%</span>
+              </div>
+              <Progress value={uploadProgress} className="h-2" />
+            </div>
+          )}
+
           {/* Actions */}
           <div className="flex justify-end gap-2 pt-4">
-            <Button variant="outline" onClick={handleClose}>
+            <Button variant="outline" onClick={handleClose} disabled={isUploading}>
               Cancelar
             </Button>
             <Button
               onClick={handleSubmit}
-              disabled={!file || !name.trim() || createTheme.isPending}
+              disabled={!file || !name.trim() || isUploading}
             >
-              {createTheme.isPending ? (
+              {isUploading ? (
                 <>
                   <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  Importando...
+                  {uploadProgress < 100 ? "Enviando..." : "Processando..."}
                 </>
               ) : (
                 "Importar Tema"

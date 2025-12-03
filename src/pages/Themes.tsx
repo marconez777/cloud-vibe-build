@@ -10,6 +10,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useThemes, useDeleteTheme } from "@/hooks/useThemes";
+import { usePagination } from "@/hooks/usePagination";
+import { PaginationControls } from "@/components/ui/pagination-controls";
 import { Theme, THEME_CATEGORIES } from "@/types/themes";
 import { ThemeCard } from "@/components/themes/ThemeCard";
 import { ThemeUpload } from "@/components/themes/ThemeUpload";
@@ -55,6 +57,8 @@ export default function Themes() {
 
     return matchesSearch && matchesCategory;
   });
+
+  const pagination = usePagination(filteredThemes, { itemsPerPage: 9 });
 
   return (
     <AppLayout>
@@ -131,17 +135,30 @@ export default function Themes() {
             )}
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {filteredThemes.map((theme) => (
-              <ThemeCard
-                key={theme.id}
-                theme={theme}
-                onPreview={setPreviewTheme}
-                onDelete={handleDelete}
-                isDeleting={deleteTheme.isPending}
-              />
-            ))}
-          </div>
+          <>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {pagination.paginatedItems.map((theme) => (
+                <ThemeCard
+                  key={theme.id}
+                  theme={theme}
+                  onPreview={setPreviewTheme}
+                  onDelete={handleDelete}
+                  isDeleting={deleteTheme.isPending}
+                />
+              ))}
+            </div>
+            <PaginationControls
+              currentPage={pagination.currentPage}
+              totalPages={pagination.totalPages}
+              onPageChange={pagination.goToPage}
+              hasNextPage={pagination.hasNextPage}
+              hasPrevPage={pagination.hasPrevPage}
+              startIndex={pagination.startIndex}
+              endIndex={pagination.endIndex}
+              totalItems={pagination.totalItems}
+              className="mt-6"
+            />
+          </>
         )}
 
         {/* Dialogs */}

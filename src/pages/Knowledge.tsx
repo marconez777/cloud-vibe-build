@@ -47,6 +47,7 @@ import {
   useToggleMemory,
   useUpdateMemory,
   MEMORY_CATEGORIES,
+  MEMORY_MAX_LENGTH,
   AGENT_INFO,
   AIMemory,
   AgentType,
@@ -208,7 +209,11 @@ export default function Knowledge() {
                 className="min-h-[100px]"
                 value={editContent}
                 onChange={(e) => setEditContent(e.target.value)}
+                maxLength={MEMORY_MAX_LENGTH}
               />
+              <p className={`text-xs ${editContent.length > MEMORY_MAX_LENGTH * 0.9 ? "text-destructive" : "text-muted-foreground"}`}>
+                {editContent.length}/{MEMORY_MAX_LENGTH} caracteres
+              </p>
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
@@ -429,7 +434,11 @@ export default function Knowledge() {
                       className="min-h-[120px]"
                       value={newContent}
                       onChange={(e) => setNewContent(e.target.value)}
+                      maxLength={MEMORY_MAX_LENGTH}
                     />
+                    <p className={`text-xs ${newContent.length > MEMORY_MAX_LENGTH * 0.9 ? "text-destructive" : "text-muted-foreground"}`}>
+                      {newContent.length}/{MEMORY_MAX_LENGTH} caracteres
+                    </p>
                   </div>
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">

@@ -49,13 +49,16 @@
 │                         FRONTEND (React)                         │
 ├─────────────────────────────────────────────────────────────────┤
 │  Pages: Index, Dashboard, Projects, Briefing, VibeChat,         │
-│         Knowledge, Preview, PageMultiplier, Versions, Help      │
+│         Knowledge, Preview, PageMultiplier, Versions,           │
+│         Themes, ProjectSettings, Help                           │
 ├─────────────────────────────────────────────────────────────────┤
 │  Components: AppLayout, AppSidebar, FileExplorer, FilePreview,  │
-│              ChatHeader, MessageBubble, GenerationProgress...   │
+│              ChatHeader, MessageBubble, GenerationProgress,     │
+│              ThemeUpload, ThemeCard, ThemeSelector...           │
 ├─────────────────────────────────────────────────────────────────┤
 │  Hooks: useProjects, useProjectFiles, useChatMessages,          │
-│         useAIAgents, useAIMemories, useGenerationStatus...      │
+│         useAIAgents, useAIMemories, useGenerationStatus,        │
+│         useThemes, useProjectSettings...                        │
 └─────────────────────────────────────────────────────────────────┘
                               │
                               ▼
@@ -63,15 +66,18 @@
 │                    SUPABASE (Lovable Cloud)                      │
 ├──────────────────┬──────────────────┬───────────────────────────┤
 │    Database      │  Edge Functions  │      Storage              │
-│   (PostgreSQL)   │   (Deno/TS)      │   (project-assets)        │
+│   (PostgreSQL)   │   (Deno/TS)      │                           │
 ├──────────────────┼──────────────────┼───────────────────────────┤
-│ - projects       │ - analyze-design │ - Imagens de referência   │
-│ - project_files  │ - generate-files │ - Documentos uploadados   │
-│ - chat_messages  │ - optimize-seo   │ - Assets de projetos      │
-│ - ai_agents      │ - export-zip     │                           │
-│ - ai_memories    │ - export-layout  │                           │
-│ - layout_versions│ - generate-layout│                           │
+│ - projects       │ - analyze-design │ - project-assets          │
+│ - project_files  │ - generate-files │ - theme-assets            │
+│ - project_settings│ - optimize-seo  │                           │
+│ - chat_messages  │ - export-zip     │                           │
+│ - ai_agents      │ - export-layout  │                           │
+│ - ai_memories    │ - generate-layout│                           │
+│ - layout_versions│ - import-theme   │                           │
 │ - page_templates │                  │                           │
+│ - themes         │                  │                           │
+│ - theme_files    │                  │                           │
 └──────────────────┴──────────────────┴───────────────────────────┘
                               │
                               ▼
@@ -159,6 +165,17 @@ phpvibe-4.0/
 │   │   │   ├── TemplatePreview.tsx
 │   │   │   ├── TemplateSelector.tsx
 │   │   │   └── VariationsTable.tsx
+│   │   ├── settings/              # Configurações do projeto
+│   │   │   ├── ContactTab.tsx
+│   │   │   ├── CustomFieldsTab.tsx
+│   │   │   ├── HoursTab.tsx
+│   │   │   ├── IdentityTab.tsx
+│   │   │   └── SocialTab.tsx
+│   │   ├── themes/                # Gestão de temas
+│   │   │   ├── ThemeCard.tsx
+│   │   │   ├── ThemePreview.tsx
+│   │   │   ├── ThemeSelector.tsx
+│   │   │   └── ThemeUpload.tsx
 │   │   └── preview/               # Preview de seções
 │   │       ├── LayoutRenderer.tsx
 │   │       └── sections/
@@ -172,7 +189,9 @@ phpvibe-4.0/
 │   │   ├── useGenerationStatus.ts
 │   │   ├── usePageTemplates.ts
 │   │   ├── useProjectFiles.ts
-│   │   └── useProjects.ts
+│   │   ├── useProjectSettings.ts  # Configurações do projeto
+│   │   ├── useProjects.ts
+│   │   └── useThemes.ts           # Gestão de temas
 │   ├── integrations/
 │   │   └── supabase/
 │   │       ├── client.ts          # Cliente Supabase (auto-gerado)
@@ -189,12 +208,15 @@ phpvibe-4.0/
 │   │   ├── Preview.tsx            # Preview de projeto
 │   │   ├── PageMultiplier.tsx     # Multiplicador de páginas
 │   │   ├── Versions.tsx           # Histórico de versões
+│   │   ├── Themes.tsx             # Biblioteca de temas
+│   │   ├── ProjectSettings.tsx    # Configurações do projeto
 │   │   ├── Help.tsx               # Ajuda
 │   │   └── NotFound.tsx           # 404
 │   ├── types/                     # Tipos TypeScript
 │   │   ├── layout-tree.ts
 │   │   ├── page-templates.ts
-│   │   └── project-files.ts
+│   │   ├── project-files.ts
+│   │   └── themes.ts              # Tipos de temas
 │   ├── App.tsx                    # Componente raiz
 │   ├── App.css                    # Estilos globais
 │   ├── index.css                  # Design system/tokens
@@ -211,6 +233,8 @@ phpvibe-4.0/
 │   │   ├── generate-files/
 │   │   │   └── index.ts
 │   │   ├── generate-layout/
+│   │   │   └── index.ts
+│   │   ├── import-theme/          # Importação de temas ZIP
 │   │   │   └── index.ts
 │   │   └── optimize-seo/
 │   │       └── index.ts
@@ -391,9 +415,62 @@ Templates para geração em massa de páginas.
 | created_at | TIMESTAMPTZ | Data de criação |
 | updated_at | TIMESTAMPTZ | Última atualização |
 
----
+#### project_settings
+Configurações personalizadas de cada projeto (dados do negócio).
 
-## Pipeline Multi-Agente de IA
+| Coluna | Tipo | Descrição |
+|--------|------|-----------|
+| id | UUID | Identificador único |
+| project_id | UUID | FK para projects |
+| company_name | TEXT | Nome da empresa |
+| slogan | TEXT | Slogan da empresa |
+| logo_url | TEXT | URL do logotipo |
+| favicon_url | TEXT | URL do favicon |
+| gallery_images | TEXT[] | URLs das imagens da galeria |
+| address | TEXT | Endereço |
+| city | TEXT | Cidade |
+| state | TEXT | Estado |
+| zip_code | TEXT | CEP |
+| phone | TEXT | Telefone |
+| whatsapp | TEXT | WhatsApp |
+| email | TEXT | E-mail |
+| social_links | JSONB | Links de redes sociais |
+| business_hours | JSONB | Horários de funcionamento |
+| custom_fields | JSONB | Campos personalizados |
+| created_at | TIMESTAMPTZ | Data de criação |
+| updated_at | TIMESTAMPTZ | Última atualização |
+
+#### themes
+Biblioteca de temas/templates HTML para uso como base em novos projetos.
+
+| Coluna | Tipo | Descrição |
+|--------|------|-----------|
+| id | UUID | Identificador único |
+| name | TEXT | Nome do tema |
+| description | TEXT | Descrição do tema |
+| category | TEXT | Categoria: general, clinic, restaurant, service, ecommerce, portfolio, landing |
+| preview_image_url | TEXT | URL da imagem de preview |
+| file_count | INTEGER | Quantidade de arquivos |
+| total_size_bytes | BIGINT | Tamanho total em bytes |
+| is_active | BOOLEAN | Se está ativo |
+| tags | TEXT[] | Tags do tema |
+| created_at | TIMESTAMPTZ | Data de criação |
+| updated_at | TIMESTAMPTZ | Última atualização |
+
+#### theme_files
+Arquivos extraídos dos temas (após upload do ZIP).
+
+| Coluna | Tipo | Descrição |
+|--------|------|-----------|
+| id | UUID | Identificador único |
+| theme_id | UUID | FK para themes (CASCADE DELETE) |
+| file_path | TEXT | Caminho do arquivo |
+| file_name | TEXT | Nome do arquivo |
+| file_type | TEXT | Tipo: html, php, css, js, image, font, etc. |
+| content | TEXT | Conteúdo (para arquivos de texto) |
+| storage_url | TEXT | URL no storage (para arquivos binários) |
+| size_bytes | INTEGER | Tamanho em bytes |
+| created_at | TIMESTAMPTZ | Data de criação |
 
 O PHPVibe utiliza um pipeline de 3 agentes especializados para gerar websites de alta qualidade:
 
@@ -1057,7 +1134,8 @@ O deploy é automático via Lovable:
 | Multi-tenant | Não implementado |
 | Deploy automático (FTP/cPanel) | Fora do escopo MVP |
 | Drag-and-drop editor | Fora do escopo MVP |
-| Templates pré-prontos | Parcialmente (via memórias) |
+| Templates pré-prontos | ✅ Implementado (Biblioteca de Temas) |
+| Configurações do projeto | ✅ Implementado |
 
 ---
 
@@ -1069,7 +1147,10 @@ O deploy é automático via Lovable:
 - [x] Adicionar preview responsivo
 - [x] Suporte a system_prompt customizado nos agentes
 
-### Fase 2: Funcionalidades de Produto
+### Fase 2: Funcionalidades de Produto ✅
+- [x] Biblioteca de temas (upload ZIP, gestão, seleção no briefing)
+- [x] Configurações do projeto (dados do negócio, identidade visual)
+- [x] Toggle de memórias com tratamento de valores nulos
 - [ ] Histórico de versões funcional
 - [ ] Cache de memórias
 - [ ] Paginação de projetos
@@ -1082,7 +1163,6 @@ O deploy é automático via Lovable:
 - [ ] Migração para Supabase Pro (timeout 400s)
 
 ### Fase 4: Features Avançadas
-- [ ] Templates pré-prontos
 - [ ] Análise de performance do site
 - [ ] Integração GitHub
 - [ ] Deploy direto (FTP/cPanel)
@@ -1099,7 +1179,9 @@ O deploy é automático via Lovable:
 | **Layout Tree** | Estrutura JSON do layout (legado) |
 | **Memory** | Instrução/conhecimento que influencia a geração |
 | **Pipeline** | Sequência de processamento multi-agente |
+| **Project Settings** | Configurações personalizadas do projeto (dados do negócio) |
 | **RLS** | Row Level Security - políticas de acesso a dados |
+| **Theme** | Template HTML/PHP base para iniciar projetos |
 | **Vibe Coding** | Metodologia de desenvolvimento conversacional |
 
 ---
@@ -1110,5 +1192,5 @@ Para dúvidas ou suporte sobre o PHPVibe 4.0, consulte a página de Ajuda (`/hel
 
 ---
 
-*Documentação gerada em Dezembro 2025*
-*Versão: 4.0.0*
+*Documentação atualizada em Dezembro 2025*
+*Versão: 4.1.0*

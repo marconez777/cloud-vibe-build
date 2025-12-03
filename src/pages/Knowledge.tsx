@@ -266,41 +266,43 @@ export default function Knowledge() {
           </div>
         ) : (
           <div className="flex items-start justify-between gap-4">
-            <div className="flex-1">
-              <div className="flex items-center gap-2 flex-wrap">
-                <h4 className="font-medium">{memory.title}</h4>
-                <Badge variant="outline" className="text-xs">
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2 flex-wrap mb-1">
+                <h4 className="font-medium truncate max-w-[300px]">{memory.title}</h4>
+                <Badge variant="outline" className="text-xs shrink-0">
                   {getCategoryLabel(memory.category)}
                 </Badge>
                 {memory.is_system && (
-                  <Badge variant="secondary" className="text-xs">
+                  <Badge variant="secondary" className="text-xs shrink-0">
                     Sistema
                   </Badge>
                 )}
-                {(memory.is_active ?? true) ? (
-                  <span className="flex items-center gap-1 text-xs text-green-500">
-                    <CheckCircle2 className="h-3 w-3" />
-                    Ativa
-                  </span>
-                ) : (
-                  <span className="flex items-center gap-1 text-xs text-muted-foreground">
-                    <XCircle className="h-3 w-3" />
-                    Inativa
-                  </span>
-                )}
+                <span className={`flex items-center gap-1 text-xs shrink-0 ${(memory.is_active ?? true) ? "text-green-500" : "text-muted-foreground"}`}>
+                  {(memory.is_active ?? true) ? (
+                    <>
+                      <CheckCircle2 className="h-3 w-3" />
+                      Ativa
+                    </>
+                  ) : (
+                    <>
+                      <XCircle className="h-3 w-3" />
+                      Inativa
+                    </>
+                  )}
+                </span>
               </div>
               <p className="mt-2 text-sm text-muted-foreground line-clamp-3">
                 {memory.content}
               </p>
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 shrink-0">
               <Switch
                 checked={memory.is_active ?? true}
                 onCheckedChange={() =>
                   handleToggleMemory(memory.id, memory.is_active)
                 }
               />
-              {!memory.is_system && (
+              {!(memory.is_system ?? false) && (
                 <>
                   <Button
                     variant="ghost"

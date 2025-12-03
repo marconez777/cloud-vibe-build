@@ -157,10 +157,11 @@ export default function Knowledge() {
     }
   };
 
-  const handleToggleMemory = async (id: string, isActive: boolean) => {
+  const handleToggleMemory = async (id: string, isActive: boolean | null) => {
     try {
-      await toggleMemory.mutateAsync({ id, is_active: !isActive });
-      toast.success(isActive ? "Memória desativada" : "Memória ativada");
+      const currentActive = isActive ?? true;
+      await toggleMemory.mutateAsync({ id, is_active: !currentActive });
+      toast.success(currentActive ? "Memória desativada" : "Memória ativada");
     } catch {
       toast.error("Erro ao atualizar memória");
     }
@@ -170,7 +171,7 @@ export default function Knowledge() {
     return MEMORY_CATEGORIES.find((c) => c.value === category)?.label || category;
   };
 
-  const totalActive = allMemories?.filter((m) => m.is_active).length || 0;
+  const totalActive = allMemories?.filter((m) => m.is_active ?? true).length || 0;
 
   const getAgentIcon = (agent: string) => {
     switch (agent) {
@@ -189,7 +190,7 @@ export default function Knowledge() {
     <Card
       key={memory.id}
       variant="glass"
-      className={`animate-fade-in ${!memory.is_active ? "opacity-60" : ""}`}
+      className={`animate-fade-in ${!(memory.is_active ?? true) ? "opacity-60" : ""}`}
     >
       <CardContent className="p-4">
         {editingMemory?.id === memory.id ? (
@@ -276,7 +277,7 @@ export default function Knowledge() {
                     Sistema
                   </Badge>
                 )}
-                {memory.is_active ? (
+                {(memory.is_active ?? true) ? (
                   <span className="flex items-center gap-1 text-xs text-green-500">
                     <CheckCircle2 className="h-3 w-3" />
                     Ativa
@@ -294,7 +295,7 @@ export default function Knowledge() {
             </div>
             <div className="flex items-center gap-2">
               <Switch
-                checked={memory.is_active}
+                checked={memory.is_active ?? true}
                 onCheckedChange={() =>
                   handleToggleMemory(memory.id, memory.is_active)
                 }
@@ -327,7 +328,7 @@ export default function Knowledge() {
 
   const renderMemoriesSection = (memories: AIMemory[] | undefined, agentKey: string) => {
     const info = AGENT_INFO[agentKey as keyof typeof AGENT_INFO];
-    const activeCount = memories?.filter((m) => m.is_active).length || 0;
+    const activeCount = memories?.filter((m) => m.is_active ?? true).length || 0;
 
     return (
       <div className="space-y-4">

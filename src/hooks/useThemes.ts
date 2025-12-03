@@ -60,16 +60,23 @@ export function useCreateTheme() {
   return useMutation({
     mutationFn: async ({ 
       formData, 
-      onProgress 
+      onProgress,
+      onXhrCreated,
     }: { 
       formData: FormData; 
       onProgress?: (progress: number) => void;
+      onXhrCreated?: (xhr: XMLHttpRequest) => void;
     }) => {
       const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
       const supabaseKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
       
       return new Promise((resolve, reject) => {
         const xhr = new XMLHttpRequest();
+        
+        // Expose xhr for cancel functionality
+        if (onXhrCreated) {
+          onXhrCreated(xhr);
+        }
         
         xhr.upload.addEventListener("progress", (event) => {
           if (event.lengthComputable && onProgress) {

@@ -1,6 +1,6 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useRef } from "react";
 import { useDropzone } from "react-dropzone";
-import { Upload, FileArchive, X, Loader2 } from "lucide-react";
+import { Upload, FileArchive, X, Loader2, Ban } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -36,6 +36,7 @@ export function ThemeUpload({ open, onOpenChange }: ThemeUploadProps) {
   const [tags, setTags] = useState("");
   const [uploadProgress, setUploadProgress] = useState(0);
   const [isUploading, setIsUploading] = useState(false);
+  const xhrRef = useRef<XMLHttpRequest | null>(null);
 
   const { toast } = useToast();
   const createTheme = useCreateTheme();
@@ -98,6 +99,7 @@ export function ThemeUpload({ open, onOpenChange }: ThemeUploadProps) {
       await createTheme.mutateAsync({
         formData,
         onProgress: (progress) => setUploadProgress(progress),
+        onXhrCreated: (xhr) => { xhrRef.current = xhr; },
       });
       toast({
         title: "Sucesso",
@@ -105,14 +107,28 @@ export function ThemeUpload({ open, onOpenChange }: ThemeUploadProps) {
       });
       handleClose();
     } catch (error: any) {
-      toast({
-        title: "Erro ao importar tema",
-        description: error.message || "Tente novamente",
-        variant: "destructive",
-      });
+      if (error.message !== "Upload cancelado") {
+        toast({
+          title: "Erro ao importar tema",
+          description: error.message || "Tente novamente",
+          variant: "destructive",
+        });
+      }
     } finally {
       setIsUploading(false);
       setUploadProgress(0);
+      xhrRef.current = null;
+    }
+  };
+
+  const handleCancel = () => {
+    if (xhrRef.current) {
+      xhrRef.current.abort();
+      xhrRef.current = null;
+      toast({
+        title: "Upload cancelado",
+        description: "O upload foi cancelado.",
+      });
     }
   };
 
@@ -236,6 +252,15 @@ export function ThemeUpload({ open, onOpenChange }: ThemeUploadProps) {
                 <span className="font-medium">{uploadProgress}%</span>
               </div>
               <Progress value={uploadProgress} className="h-2" />
+              <Button
+                variant="outline"
+                size="sm"
+                className="w-full mt-2"
+                onClick={handleCancel}
+              >
+                <Ban className="h-4 w-4 mr-2" />
+                Cancelar Upload
+              </Button>
             </div>
           )}
 

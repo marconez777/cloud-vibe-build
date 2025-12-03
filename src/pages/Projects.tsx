@@ -6,6 +6,8 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Plus, Sparkles, Search, Loader2, Trash2, Clock, FolderOpen } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { useProjects, useDeleteProject } from "@/hooks/useProjects";
+import { usePagination } from "@/hooks/usePagination";
+import { PaginationControls } from "@/components/ui/pagination-controls";
 import { toast } from "sonner";
 import { formatDistanceToNow } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -32,6 +34,8 @@ export default function Projects() {
   const filteredProjects = projects?.filter((project) =>
     project.name.toLowerCase().includes(search.toLowerCase())
   );
+
+  const pagination = usePagination(filteredProjects, { itemsPerPage: 9 });
 
   const handleDeleteClick = (id: string, name: string) => {
     setDeleteDialog({ open: true, id, name });
@@ -94,58 +98,71 @@ export default function Projects() {
 
         {/* Projects list */}
         {!isLoading && !error && filteredProjects && filteredProjects.length > 0 && (
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {filteredProjects.map((project) => (
-              <Link key={project.id} to={`/preview/${project.id}`}>
-                <Card variant="interactive" className="group h-full">
-                  <CardContent className="p-0">
-                    {/* Thumbnail */}
-                    <div className="aspect-video bg-muted/50 flex items-center justify-center border-b border-border">
-                      <FolderOpen className="h-12 w-12 text-muted-foreground/50" />
-                    </div>
-                    
-                    {/* Content */}
-                    <div className="p-4">
-                      <div className="flex items-start justify-between gap-2">
-                        <div className="min-w-0 flex-1">
-                          <h3 className="font-heading font-semibold truncate">
-                            {project.name}
-                          </h3>
-                          <p className="text-sm text-muted-foreground line-clamp-2 mt-1">
-                            {project.description || "Sem descrição"}
-                          </p>
-                        </div>
-                        <Badge variant={statusLabels[project.status]?.variant || "secondary"}>
-                          {statusLabels[project.status]?.label || project.status}
-                        </Badge>
+          <>
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              {pagination.paginatedItems.map((project) => (
+                <Link key={project.id} to={`/preview/${project.id}`}>
+                  <Card variant="interactive" className="group h-full">
+                    <CardContent className="p-0">
+                      {/* Thumbnail */}
+                      <div className="aspect-video bg-muted/50 flex items-center justify-center border-b border-border">
+                        <FolderOpen className="h-12 w-12 text-muted-foreground/50" />
                       </div>
                       
-                      <div className="mt-4 flex items-center justify-between">
-                        <span className="flex items-center gap-1 text-xs text-muted-foreground">
-                          <Clock className="h-3 w-3" />
-                          {formatDistanceToNow(new Date(project.created_at), {
-                            addSuffix: true,
-                            locale: ptBR,
-                          })}
-                        </span>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity"
-                          onClick={(e) => {
-                            e.preventDefault();
-                            handleDeleteClick(project.id, project.name);
-                          }}
-                        >
-                          <Trash2 className="h-4 w-4 text-muted-foreground hover:text-destructive" />
-                        </Button>
+                      {/* Content */}
+                      <div className="p-4">
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="min-w-0 flex-1">
+                            <h3 className="font-heading font-semibold truncate">
+                              {project.name}
+                            </h3>
+                            <p className="text-sm text-muted-foreground line-clamp-2 mt-1">
+                              {project.description || "Sem descrição"}
+                            </p>
+                          </div>
+                          <Badge variant={statusLabels[project.status]?.variant || "secondary"}>
+                            {statusLabels[project.status]?.label || project.status}
+                          </Badge>
+                        </div>
+                        
+                        <div className="mt-4 flex items-center justify-between">
+                          <span className="flex items-center gap-1 text-xs text-muted-foreground">
+                            <Clock className="h-3 w-3" />
+                            {formatDistanceToNow(new Date(project.created_at), {
+                              addSuffix: true,
+                              locale: ptBR,
+                            })}
+                          </span>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity"
+                            onClick={(e) => {
+                              e.preventDefault();
+                              handleDeleteClick(project.id, project.name);
+                            }}
+                          >
+                            <Trash2 className="h-4 w-4 text-muted-foreground hover:text-destructive" />
+                          </Button>
+                        </div>
                       </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              </Link>
-            ))}
-          </div>
+                    </CardContent>
+                  </Card>
+                </Link>
+              ))}
+            </div>
+            <PaginationControls
+              currentPage={pagination.currentPage}
+              totalPages={pagination.totalPages}
+              onPageChange={pagination.goToPage}
+              hasNextPage={pagination.hasNextPage}
+              hasPrevPage={pagination.hasPrevPage}
+              startIndex={pagination.startIndex}
+              endIndex={pagination.endIndex}
+              totalItems={pagination.totalItems}
+              className="mt-6"
+            />
+          </>
         )}
 
         {/* Empty state */}

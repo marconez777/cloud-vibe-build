@@ -26,6 +26,8 @@ export const MEMORY_CATEGORIES = [
   { value: "business", label: "Negócio" },
 ] as const;
 
+export const MEMORY_MAX_LENGTH = 5000; // Max characters for memory content
+
 export const AGENT_INFO = {
   design_analyst: {
     name: "Design Analyst",
@@ -171,6 +173,11 @@ export function useCreateMemory() {
       priority?: number;
       agent?: AgentType;
     }) => {
+      // Validate content length
+      if (content.length > MEMORY_MAX_LENGTH) {
+        throw new Error(`Conteúdo excede o limite de ${MEMORY_MAX_LENGTH} caracteres`);
+      }
+      
       const { data, error } = await supabase
         .from("ai_memories")
         .insert({ title, content, type, category, priority, agent, is_system: false })
@@ -221,6 +228,11 @@ export function useUpdateMemory() {
       category: string;
       agent?: AgentType;
     }) => {
+      // Validate content length
+      if (content.length > MEMORY_MAX_LENGTH) {
+        throw new Error(`Conteúdo excede o limite de ${MEMORY_MAX_LENGTH} caracteres`);
+      }
+      
       const updateData: any = { title, content, category };
       if (agent) updateData.agent = agent;
 

@@ -39,6 +39,7 @@ export default function Preview() {
   const { data: files, isLoading: filesLoading } = useProjectFiles(projectId);
   const [viewMode, setViewMode] = useState<ViewMode>("desktop");
   const [activeTab, setActiveTab] = useState("preview");
+  const [previewPage, setPreviewPage] = useState<string>("index.html");
   const [exportDialogOpen, setExportDialogOpen] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
 
@@ -213,8 +214,12 @@ export default function Preview() {
                 className="mx-auto h-full overflow-hidden rounded-lg border border-border bg-white shadow-lg transition-all duration-300"
                 style={{ maxWidth: viewModeWidths[viewMode] }}
               >
-                {hasFiles ? (
-                  <ResponsivePreview files={files} />
+              {hasFiles ? (
+                  <ResponsivePreview 
+                    files={files}
+                    currentPage={previewPage}
+                    onPageChange={setPreviewPage}
+                  />
                 ) : (
                   <div className="flex h-full flex-col items-center justify-center gap-4 p-8 text-center">
                     <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-primary/10">
@@ -242,7 +247,14 @@ export default function Preview() {
             <TabsContent value="files" className="h-[calc(100%-3rem)] m-0 p-4">
               <div className="h-full rounded-lg border border-border bg-background shadow-lg overflow-hidden">
                 {hasFiles ? (
-                  <FileExplorer projectId={projectId!} />
+                  <FileExplorer 
+                    projectId={projectId!}
+                    previewPage={previewPage}
+                    onPreviewPage={(path) => {
+                      setPreviewPage(path);
+                      setActiveTab("preview");
+                    }}
+                  />
                 ) : (
                   <div className="flex h-full flex-col items-center justify-center gap-4 p-8 text-center">
                     <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-primary/10">

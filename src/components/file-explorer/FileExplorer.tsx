@@ -8,12 +8,29 @@ import { toast } from "sonner";
 
 interface FileExplorerProps {
   projectId: string;
+  previewPage?: string;
+  onPreviewPage?: (path: string) => void;
 }
 
-export function FileExplorer({ projectId }: FileExplorerProps) {
+export function FileExplorer({ projectId, previewPage, onPreviewPage }: FileExplorerProps) {
   const { data: files, isLoading } = useProjectFiles(projectId);
   const updateFile = useUpdateFile();
   const [selectedPath, setSelectedPath] = useState<string | null>(null);
+
+  // Handle file selection - trigger preview for HTML files
+  const handleSelectFile = (path: string) => {
+    setSelectedPath(path);
+    
+    // If it's an HTML file (not in components folder), notify parent for preview
+    if (
+      path.endsWith('.html') && 
+      !path.startsWith('components/') && 
+      !path.includes('/components/') &&
+      onPreviewPage
+    ) {
+      onPreviewPage(path);
+    }
+  };
 
   const fileTree = useMemo(() => {
     if (!files) return [];
@@ -58,7 +75,8 @@ export function FileExplorer({ projectId }: FileExplorerProps) {
           <FileTree
             items={fileTree}
             selectedPath={selectedPath}
-            onSelectFile={setSelectedPath}
+            onSelectFile={handleSelectFile}
+            previewPage={previewPage}
           />
         </ScrollArea>
       </div>

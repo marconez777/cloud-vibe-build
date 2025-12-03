@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { ChevronRight, ChevronDown, File, Folder, FolderOpen } from "lucide-react";
+import { ChevronRight, ChevronDown, File, Folder, FolderOpen, Eye } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { FileTreeItem } from "@/types/project-files";
 
@@ -7,6 +7,7 @@ interface FileTreeProps {
   items: FileTreeItem[];
   selectedPath: string | null;
   onSelectFile: (path: string) => void;
+  previewPage?: string;
 }
 
 interface FileTreeNodeProps {
@@ -14,6 +15,7 @@ interface FileTreeNodeProps {
   depth: number;
   selectedPath: string | null;
   onSelectFile: (path: string) => void;
+  previewPage?: string;
 }
 
 function getFileIcon(fileType?: string) {
@@ -25,10 +27,11 @@ function getFileIcon(fileType?: string) {
   return <File className={cn("h-4 w-4", colors[fileType || ""] || "text-muted-foreground")} />;
 }
 
-function FileTreeNode({ item, depth, selectedPath, onSelectFile }: FileTreeNodeProps) {
+function FileTreeNode({ item, depth, selectedPath, onSelectFile, previewPage }: FileTreeNodeProps) {
   const [isOpen, setIsOpen] = useState(true);
   const isFolder = item.type === "folder";
   const isSelected = selectedPath === item.path;
+  const isPreviewPage = item.fileType === "html" && item.path === previewPage;
 
   const handleClick = () => {
     if (isFolder) {
@@ -69,7 +72,10 @@ function FileTreeNode({ item, depth, selectedPath, onSelectFile }: FileTreeNodeP
             {getFileIcon(item.fileType)}
           </>
         )}
-        <span className="truncate">{item.name}</span>
+        <span className="truncate flex-1">{item.name}</span>
+        {isPreviewPage && (
+          <Eye className="h-3 w-3 text-primary ml-auto" />
+        )}
       </div>
       {isFolder && isOpen && item.children && (
         <div>
@@ -80,6 +86,7 @@ function FileTreeNode({ item, depth, selectedPath, onSelectFile }: FileTreeNodeP
               depth={depth + 1}
               selectedPath={selectedPath}
               onSelectFile={onSelectFile}
+              previewPage={previewPage}
             />
           ))}
         </div>
@@ -88,7 +95,7 @@ function FileTreeNode({ item, depth, selectedPath, onSelectFile }: FileTreeNodeP
   );
 }
 
-export function FileTree({ items, selectedPath, onSelectFile }: FileTreeProps) {
+export function FileTree({ items, selectedPath, onSelectFile, previewPage }: FileTreeProps) {
   if (items.length === 0) {
     return (
       <div className="p-4 text-center text-sm text-muted-foreground">
@@ -106,6 +113,7 @@ export function FileTree({ items, selectedPath, onSelectFile }: FileTreeProps) {
           depth={0}
           selectedPath={selectedPath}
           onSelectFile={onSelectFile}
+          previewPage={previewPage}
         />
       ))}
     </div>

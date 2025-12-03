@@ -202,9 +202,16 @@ export default function VibeChat() {
 
         completeGeneration();
 
+        // Check if SEO was applied
+        if (!isEditMode && data.seoApplied === false) {
+          toast.warning("SEO não foi aplicado. Tente regenerar o site.", {
+            duration: 5000,
+          });
+        }
+
         const successContent = isEditMode
           ? `${data.files?.length || 0} arquivo(s) atualizado(s)! Veja o preview ou explore os arquivos.`
-          : `Site gerado com sucesso!\n\n📁 Estrutura:\n• index.html (HTML + CSS + JS inline)\n\nExplore os arquivos ou continue editando via chat.`;
+          : `Site gerado com sucesso!\n\n📁 Estrutura:\n• index.html (HTML + CSS + JS inline)\n\nExplore os arquivos ou continue editando via chat.${data.seoApplied === false ? "\n\n⚠️ Otimização SEO não foi aplicada." : ""}`;
 
         const successMsg: LocalMessage = {
           id: `success-${Date.now()}`,

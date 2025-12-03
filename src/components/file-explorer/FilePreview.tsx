@@ -13,7 +13,10 @@ export function FilePreview({ files }: FilePreviewProps) {
     const indexFile = files.find((f) => f.file_path === "index.html");
     if (!indexFile) return "";
 
-    // Get components
+    // Get the original HTML content
+    let html = indexFile.content;
+
+    // Get components for placeholder replacement
     const componentsMap: Record<string, string> = {};
     for (const file of files) {
       if (file.file_path.startsWith("components/")) {
@@ -22,8 +25,7 @@ export function FilePreview({ files }: FilePreviewProps) {
       }
     }
 
-    // Replace placeholders in index.html (support both formats)
-    let html = indexFile.content;
+    // Replace placeholders (support both formats)
     for (const [name, content] of Object.entries(componentsMap)) {
       // Format 1: {{ header }} - mustache style
       const mustachePlaceholder = new RegExp(`{{\\s*${name}\\s*}}`, "gi");
@@ -36,6 +38,60 @@ export function FilePreview({ files }: FilePreviewProps) {
       );
       html = html.replace(elementPlaceholder, content);
     }
+
+    // Check if the HTML already has complete structure (with <!DOCTYPE> and <html>)
+    const hasDoctype = /<!DOCTYPE\s+html>/i.test(html);
+    const hasHtmlTag = /<html[^>]*>/i.test(html);
+    
+    if (hasDoctype && hasHtmlTag) {
+      // The HTML is already complete - inject external CSS/JS files only
+      let finalHtml = html;
+
+      // Collect additional CSS from separate files
+      let additionalCss = "";
+      for (const file of files) {
+        if (file.file_type === "css" && file.file_path !== "index.html") {
+          additionalCss += `/* ${file.file_name} */\n${file.content}\n`;
+        }
+      }
+
+      // Collect additional JS from separate files
+      let additionalJs = "";
+      for (const file of files) {
+        if ((file.file_type === "js" || file.file_type === "javascript") && file.file_path !== "index.html") {
+          additionalJs += `/* ${file.file_name} */\n${file.content}\n`;
+        }
+      }
+
+      // Inject additional CSS before </head>
+      if (additionalCss) {
+        finalHtml = finalHtml.replace(
+          /<\/head>/i,
+          `<style>${additionalCss}</style>\n</head>`
+        );
+      }
+
+      // Inject additional JS before </body>
+      if (additionalJs) {
+        finalHtml = finalHtml.replace(
+          /<\/body>/i,
+          `<script>${additionalJs}</script>\n</body>`
+        );
+      }
+
+      return finalHtml;
+    }
+
+    // Fallback: Build full HTML document from partial content
+    // Extract existing head content if present
+    const headMatch = html.match(/<head[^>]*>([\s\S]*?)<\/head>/i);
+    const existingHead = headMatch ? headMatch[1] : "";
+    
+    // Extract body content
+    const bodyMatch = html.match(/<body[^>]*>([\s\S]*?)<\/body>/i);
+    const bodyContent = bodyMatch 
+      ? bodyMatch[1] 
+      : html.replace(/<html[^>]*>|<\/html>|<head>[\s\S]*?<\/head>|<!DOCTYPE[^>]*>/gi, "").trim();
 
     // Collect CSS
     let cssContent = "";
@@ -53,17 +109,18 @@ export function FilePreview({ files }: FilePreviewProps) {
       }
     }
 
-    // Build full HTML document
+    // Build full HTML document preserving original head content
     const fullHtml = `<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <style>${cssContent}</style>
+  ${existingHead}
+  ${cssContent ? `<style>${cssContent}</style>` : ""}
 </head>
 <body>
-${html.replace(/<html[^>]*>|<\/html>|<head>[\s\S]*?<\/head>|<!DOCTYPE[^>]*>/gi, "").replace(/<body[^>]*>|<\/body>/gi, "").trim()}
-<script>${jsContent}</script>
+${bodyContent}
+${jsContent ? `<script>${jsContent}</script>` : ""}
 </body>
 </html>`;
 

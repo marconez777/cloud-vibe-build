@@ -10,6 +10,7 @@ import { toast } from "sonner";
 import { formatDistanceToNow } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Badge } from "@/components/ui/badge";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 
 const statusLabels: Record<string, { label: string; variant: "default" | "secondary" | "destructive" | "outline" }> = {
   draft: { label: "Rascunho", variant: "secondary" },
@@ -20,6 +21,11 @@ const statusLabels: Record<string, { label: string; variant: "default" | "second
 
 export default function Projects() {
   const [search, setSearch] = useState("");
+  const [deleteDialog, setDeleteDialog] = useState<{ open: boolean; id: string; name: string }>({
+    open: false,
+    id: "",
+    name: "",
+  });
   const { data: projects, isLoading, error } = useProjects();
   const deleteProject = useDeleteProject();
 
@@ -27,11 +33,13 @@ export default function Projects() {
     project.name.toLowerCase().includes(search.toLowerCase())
   );
 
-  const handleDelete = async (id: string, name: string) => {
-    if (!confirm(`Tem certeza que deseja excluir "${name}"?`)) return;
-    
+  const handleDeleteClick = (id: string, name: string) => {
+    setDeleteDialog({ open: true, id, name });
+  };
+
+  const handleDeleteConfirm = async () => {
     try {
-      await deleteProject.mutateAsync(id);
+      await deleteProject.mutateAsync(deleteDialog.id);
       toast.success("Projeto excluído com sucesso!");
     } catch (error) {
       toast.error("Erro ao excluir projeto");
@@ -126,7 +134,7 @@ export default function Projects() {
                           className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity"
                           onClick={(e) => {
                             e.preventDefault();
-                            handleDelete(project.id, project.name);
+                            handleDeleteClick(project.id, project.name);
                           }}
                         >
                           <Trash2 className="h-4 w-4 text-muted-foreground hover:text-destructive" />
@@ -164,6 +172,18 @@ export default function Projects() {
             )}
           </Card>
         )}
+
+        <ConfirmDialog
+          open={deleteDialog.open}
+          onOpenChange={(open) => setDeleteDialog((prev) => ({ ...prev, open }))}
+          title="Excluir projeto"
+          description={`Tem certeza que deseja excluir "${deleteDialog.name}"? Esta ação não pode ser desfeita.`}
+          confirmText="Excluir"
+          cancelText="Cancelar"
+          onConfirm={handleDeleteConfirm}
+          isLoading={deleteProject.isPending}
+          variant="destructive"
+        />
       </div>
     </AppLayout>
   );

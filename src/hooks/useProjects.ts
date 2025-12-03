@@ -112,10 +112,20 @@ export function useProjectsStats() {
         .from("layout_versions")
         .select("*", { count: "exact", head: true });
 
+      // Count total lines from project_files
+      const { data: files } = await supabase
+        .from("project_files")
+        .select("content");
+      
+      const totalLines = files?.reduce((acc, file) => {
+        const lines = (file.content?.match(/\n/g) || []).length + 1;
+        return acc + lines;
+      }, 0) || 0;
+
       return {
         totalProjects,
         totalVersions: versionsCount || 0,
-        totalLines: 0, // Placeholder for future implementation
+        totalLines,
       };
     },
   });

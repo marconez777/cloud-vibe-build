@@ -54,6 +54,9 @@ import {
 } from "@/hooks/useAIMemories";
 import { DocumentUpload } from "@/components/DocumentUpload";
 import { AgentManager } from "@/components/knowledge/AgentManager";
+import { usePagination } from "@/hooks/usePagination";
+import { PaginationControls } from "@/components/ui/pagination-controls";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 
 export default function Knowledge() {
   const { data: allMemories, isLoading } = useAIMemories();
@@ -74,6 +77,11 @@ export default function Knowledge() {
   const [editContent, setEditContent] = useState("");
   const [editCategory, setEditCategory] = useState("general");
   const [editAgent, setEditAgent] = useState<AgentType>("all");
+  const [deleteDialog, setDeleteDialog] = useState<{ open: boolean; id: string; title: string }>({
+    open: false,
+    id: "",
+    title: "",
+  });
 
   // Filter memories by agent
   const designAnalystMemories = allMemories?.filter(
@@ -86,6 +94,12 @@ export default function Knowledge() {
     (m) => m.agent === "seo_specialist"
   );
   const sharedMemories = allMemories?.filter((m) => m.agent === "all");
+
+  // Pagination for each agent
+  const designPagination = usePagination(designAnalystMemories, { itemsPerPage: 6 });
+  const codePagination = usePagination(codeGeneratorMemories, { itemsPerPage: 6 });
+  const seoPagination = usePagination(seoSpecialistMemories, { itemsPerPage: 6 });
+  const sharedPagination = usePagination(sharedMemories, { itemsPerPage: 6 });
 
   const startEditing = (memory: AIMemory) => {
     setEditingMemory(memory);
@@ -149,9 +163,13 @@ export default function Knowledge() {
     }
   };
 
-  const handleDeleteMemory = async (id: string) => {
+  const handleDeleteClick = (id: string, title: string) => {
+    setDeleteDialog({ open: true, id, title });
+  };
+
+  const handleDeleteConfirm = async () => {
     try {
-      await deleteMemory.mutateAsync(id);
+      await deleteMemory.mutateAsync(deleteDialog.id);
       toast.success("Memória removida");
     } catch {
       toast.error("Erro ao remover memória");
@@ -319,7 +337,7 @@ export default function Knowledge() {
                   <Button
                     variant="ghost"
                     size="icon"
-                    onClick={() => handleDeleteMemory(memory.id)}
+                    onClick={() => handleDeleteClick(memory.id, memory.title)}
                     disabled={deleteMemory.isPending}
                   >
                     <Trash2 className="h-4 w-4 text-destructive" />
@@ -333,7 +351,11 @@ export default function Knowledge() {
     </Card>
   );
 
-  const renderMemoriesSection = (memories: AIMemory[] | undefined, agentKey: string) => {
+  const renderMemoriesSection = (
+    memories: AIMemory[] | undefined, 
+    agentKey: string,
+    pagination: ReturnType<typeof usePagination<AIMemory>>
+  ) => {
     const info = AGENT_INFO[agentKey as keyof typeof AGENT_INFO];
     const activeCount = memories?.filter((m) => m.is_active ?? true).length || 0;
 
@@ -359,9 +381,21 @@ export default function Knowledge() {
             <Loader2 className="h-8 w-8 animate-spin text-primary" />
           </div>
         ) : memories && memories.length > 0 ? (
-          <div className="space-y-3">
-            {memories.map(renderMemoryCard)}
-          </div>
+          <>
+            <div className="space-y-3">
+              {pagination.paginatedItems.map(renderMemoryCard)}
+            </div>
+            <PaginationControls
+              currentPage={pagination.currentPage}
+              totalPages={pagination.totalPages}
+              onPageChange={pagination.goToPage}
+              hasNextPage={pagination.hasNextPage}
+              hasPrevPage={pagination.hasPrevPage}
+              startIndex={pagination.startIndex}
+              endIndex={pagination.endIndex}
+              totalItems={pagination.totalItems}
+            />
+          </>
         ) : (
           <Card variant="glass" className="p-8 text-center">
             <p className="text-muted-foreground">
@@ -521,19 +555,19 @@ export default function Knowledge() {
               </TabsList>
 
               <TabsContent value="design_analyst" className="mt-6">
-                {renderMemoriesSection(designAnalystMemories, "design_analyst")}
+                {renderMemoriesSection(designAnalystMemories, "design_analyst", designPagination)}
               </TabsContent>
 
               <TabsContent value="code_generator" className="mt-6">
-                {renderMemoriesSection(codeGeneratorMemories, "code_generator")}
+                {renderMemoriesSection(codeGeneratorMemories, "code_generator", codePagination)}
               </TabsContent>
 
               <TabsContent value="seo_specialist" className="mt-6">
-                {renderMemoriesSection(seoSpecialistMemories, "seo_specialist")}
+                {renderMemoriesSection(seoSpecialistMemories, "seo_specialist", seoPagination)}
               </TabsContent>
 
               <TabsContent value="all" className="mt-6">
-                {renderMemoriesSection(sharedMemories, "all")}
+                {renderMemoriesSection(sharedMemories, "all", sharedPagination)}
               </TabsContent>
             </Tabs>
 
@@ -658,6 +692,18 @@ export default function Knowledge() {
           </div>
         </div>
       </div>
+
+      <ConfirmDialog
+        open={deleteDialog.open}
+        onOpenChange={(open) => setDeleteDialog((prev) => ({ ...prev, open }))}
+        title="Excluir memória"
+        description={`Tem certeza que deseja excluir "${deleteDialog.title}"? Esta ação não pode ser desfeita.`}
+        confirmText="Excluir"
+        cancelText="Cancelar"
+        onConfirm={handleDeleteConfirm}
+        isLoading={deleteMemory.isPending}
+        variant="destructive"
+      />
     </AppLayout>
   );
 }

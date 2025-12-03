@@ -1,19 +1,10 @@
+import { useState } from "react";
 import { Theme, THEME_CATEGORIES } from "@/types/themes";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Eye, Trash2, FileCode, HardDrive } from "lucide-react";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from "@/components/ui/alert-dialog";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 
 interface ThemeCardProps {
   theme: Theme;
@@ -23,6 +14,7 @@ interface ThemeCardProps {
 }
 
 export function ThemeCard({ theme, onPreview, onDelete, isDeleting }: ThemeCardProps) {
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const categoryLabel = THEME_CATEGORIES.find(c => c.value === theme.category)?.label || theme.category;
   
   const formatBytes = (bytes: number) => {
@@ -53,32 +45,28 @@ export function ThemeCard({ theme, onPreview, onDelete, isDeleting }: ThemeCardP
             <Eye className="h-4 w-4 mr-1" />
             Preview
           </Button>
-          <AlertDialog>
-            <AlertDialogTrigger asChild>
-              <Button size="sm" variant="destructive" disabled={isDeleting}>
-                <Trash2 className="h-4 w-4" />
-              </Button>
-            </AlertDialogTrigger>
-            <AlertDialogContent>
-              <AlertDialogHeader>
-                <AlertDialogTitle>Excluir tema?</AlertDialogTitle>
-                <AlertDialogDescription>
-                  Esta ação não pode ser desfeita. O tema "{theme.name}" e todos os seus arquivos serão excluídos permanentemente.
-                </AlertDialogDescription>
-              </AlertDialogHeader>
-              <AlertDialogFooter>
-                <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                <AlertDialogAction
-                  onClick={() => onDelete(theme.id)}
-                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                >
-                  Excluir
-                </AlertDialogAction>
-              </AlertDialogFooter>
-            </AlertDialogContent>
-          </AlertDialog>
+          <Button 
+            size="sm" 
+            variant="destructive" 
+            disabled={isDeleting}
+            onClick={() => setDeleteDialogOpen(true)}
+          >
+            <Trash2 className="h-4 w-4" />
+          </Button>
         </div>
       </div>
+
+      <ConfirmDialog
+        open={deleteDialogOpen}
+        onOpenChange={setDeleteDialogOpen}
+        title="Excluir tema?"
+        description={`Esta ação não pode ser desfeita. O tema "${theme.name}" e todos os seus arquivos serão excluídos permanentemente.`}
+        confirmText="Excluir"
+        cancelText="Cancelar"
+        onConfirm={() => onDelete(theme.id)}
+        isLoading={isDeleting}
+        variant="destructive"
+      />
 
       <CardContent className="p-4">
         <div className="flex items-start justify-between gap-2 mb-2">

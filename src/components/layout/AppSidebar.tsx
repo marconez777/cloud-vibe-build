@@ -10,9 +10,11 @@ import {
   Palette,
   ChevronLeft,
   ChevronRight,
+  LogOut,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/components/ui/tooltip";
+import { useAuth } from "@/contexts/AuthContext";
 
 const navItems = [
   { icon: LayoutDashboard, label: "Dashboard", href: "/dashboard" },
@@ -30,6 +32,7 @@ interface AppSidebarProps {
 
 export function AppSidebar({ collapsed, onToggle }: AppSidebarProps) {
   const location = useLocation();
+  const { user, signOut } = useAuth();
 
   return (
     <TooltipProvider delayDuration={0}>
@@ -90,15 +93,41 @@ export function AppSidebar({ collapsed, onToggle }: AppSidebarProps) {
             })}
           </nav>
 
-          {/* Footer */}
-          {!collapsed && (
-            <div className="border-t border-sidebar-border p-4">
-              <div className="glass rounded-lg p-4">
-                <p className="text-xs text-muted-foreground">Powered by AI</p>
-                <p className="mt-1 text-sm font-medium text-foreground">OpenAI GPT-4o</p>
+          {/* User & Logout */}
+          <div className="border-t border-sidebar-border p-2">
+            {collapsed ? (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={signOut}
+                    className="w-full justify-center text-muted-foreground hover:text-destructive"
+                  >
+                    <LogOut className="h-4 w-4" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent side="right">Sair</TooltipContent>
+              </Tooltip>
+            ) : (
+              <div className="space-y-2">
+                {user && (
+                  <p className="truncate px-2 text-xs text-muted-foreground">
+                    {user.email}
+                  </p>
+                )}
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={signOut}
+                  className="w-full justify-start text-muted-foreground hover:text-destructive"
+                >
+                  <LogOut className="mr-2 h-4 w-4" />
+                  Sair
+                </Button>
               </div>
-            </div>
-          )}
+            )}
+          </div>
 
           {/* Toggle Button */}
           <div className={cn("border-t border-sidebar-border p-2", collapsed && "mt-auto")}>

@@ -10,9 +10,9 @@ export interface AIMemory {
   type: string;
   category: string;
   agent: AgentType;
-  is_active: boolean;
-  is_system: boolean;
-  priority: number;
+  is_active: boolean | null;
+  is_system: boolean | null;
+  priority: number | null;
   created_at: string;
   updated_at: string;
 }

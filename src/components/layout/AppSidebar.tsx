@@ -7,6 +7,7 @@ import {
   HelpCircle,
   Sparkles,
   Brain,
+  Palette,
   ChevronLeft,
   ChevronRight,
 } from "lucide-react";
@@ -17,6 +18,7 @@ const navItems = [
   { icon: LayoutDashboard, label: "Dashboard", href: "/dashboard" },
   { icon: FolderOpen, label: "Projects", href: "/projects" },
   { icon: Plus, label: "New Project", href: "/new" },
+  { icon: Palette, label: "Themes", href: "/themes" },
   { icon: Brain, label: "Knowledge Base", href: "/knowledge" },
   { icon: HelpCircle, label: "Help", href: "/help" },
 ];

@@ -10,6 +10,8 @@ import { Sparkles, ArrowRight, Lightbulb } from "lucide-react";
 import { toast } from "sonner";
 import { useCreateProject } from "@/hooks/useProjects";
 import { ImageUpload } from "@/components/ImageUpload";
+import { ThemeSelector } from "@/components/themes/ThemeSelector";
+import { useCopyThemeToProject } from "@/hooks/useThemes";
 
 const examples = [
   "Site para clínica odontológica com hero, serviços, depoimentos e contato. Cores azul e branco.",
@@ -22,7 +24,9 @@ export default function Briefing() {
   const [name, setName] = useState("");
   const [briefing, setBriefing] = useState("");
   const [referenceImages, setReferenceImages] = useState<string[]>([]);
+  const [selectedThemeId, setSelectedThemeId] = useState<string | null>(null);
   const createProject = useCreateProject();
+  const copyThemeToProject = useCopyThemeToProject();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -50,7 +54,22 @@ export default function Briefing() {
         status: "draft",
       });
 
-      toast.success("Projeto criado com sucesso!");
+      // If a theme was selected, copy its files to the project
+      if (selectedThemeId) {
+        try {
+          await copyThemeToProject.mutateAsync({
+            themeId: selectedThemeId,
+            projectId: project.id,
+          });
+          toast.success("Projeto criado com tema base!");
+        } catch (themeError) {
+          console.error("Error copying theme files:", themeError);
+          toast.warning("Projeto criado, mas houve erro ao copiar o tema.");
+        }
+      } else {
+        toast.success("Projeto criado com sucesso!");
+      }
+      
       navigate(`/vibe/${project.id}`);
     } catch (error) {
       console.error("Error creating project:", error);
@@ -96,6 +115,14 @@ export default function Briefing() {
                     />
                   </div>
 
+                  {/* Theme Selection */}
+                  <div className="space-y-2 p-4 rounded-lg bg-muted/30 border border-border/50">
+                    <ThemeSelector
+                      selectedThemeId={selectedThemeId}
+                      onSelect={setSelectedThemeId}
+                    />
+                  </div>
+
                   <div className="space-y-2">
                     <Label htmlFor="briefing">Descrição do Site</Label>
                     <Textarea
@@ -124,9 +151,9 @@ export default function Briefing() {
                     variant="hero"
                     size="lg"
                     className="w-full"
-                    disabled={createProject.isPending}
+                    disabled={createProject.isPending || copyThemeToProject.isPending}
                   >
-                    {createProject.isPending ? (
+                    {createProject.isPending || copyThemeToProject.isPending ? (
                       <>
                         <div className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-primary-foreground border-t-transparent" />
                         Criando...

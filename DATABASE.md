@@ -37,81 +37,218 @@ O PHPVibe 4.0 utiliza **PostgreSQL** através do **Supabase (Lovable Cloud)** co
 
 ## Diagrama ER
 
+### Diagrama Mermaid - Entidade Relacionamento
+
+```mermaid
+erDiagram
+    %% ==========================================
+    %% CORE: Projects & Related Tables
+    %% ==========================================
+    
+    projects {
+        uuid id PK "gen_random_uuid()"
+        text name "NOT NULL"
+        text description
+        text status "DEFAULT 'draft'"
+        jsonb layout_tree
+        text thumbnail_url
+        timestamptz created_at "DEFAULT now()"
+        timestamptz updated_at "DEFAULT now()"
+    }
+    
+    project_files {
+        uuid id PK "gen_random_uuid()"
+        uuid project_id FK "NOT NULL"
+        text file_path "NOT NULL"
+        text file_name "NOT NULL"
+        text file_type "NOT NULL"
+        text content "NOT NULL"
+        timestamptz created_at "DEFAULT now()"
+        timestamptz updated_at "DEFAULT now()"
+    }
+    
+    project_settings {
+        uuid id PK "gen_random_uuid()"
+        uuid project_id FK "UNIQUE NOT NULL"
+        text company_name
+        text slogan
+        text logo_url
+        text favicon_url
+        text_array gallery_images "DEFAULT '{}'"
+        text address
+        text city
+        text state
+        text zip_code
+        text phone
+        text whatsapp
+        text email
+        jsonb social_links "DEFAULT '{}'"
+        jsonb business_hours "DEFAULT '{}'"
+        jsonb custom_fields "DEFAULT '{}'"
+        timestamptz created_at "DEFAULT now()"
+        timestamptz updated_at "DEFAULT now()"
+    }
+    
+    chat_messages {
+        uuid id PK "gen_random_uuid()"
+        uuid project_id FK "NOT NULL"
+        text role "NOT NULL"
+        text content "NOT NULL"
+        jsonb metadata "DEFAULT '{}'"
+        timestamptz created_at "DEFAULT now()"
+    }
+    
+    layout_versions {
+        uuid id PK "gen_random_uuid()"
+        uuid project_id FK "NOT NULL"
+        jsonb layout_tree "NOT NULL"
+        integer version_number "AUTO-INCREMENT"
+        text commit_message
+        boolean is_current "DEFAULT true"
+        text created_by
+        timestamptz created_at "DEFAULT now()"
+    }
+    
+    page_templates {
+        uuid id PK "gen_random_uuid()"
+        uuid project_id FK "NOT NULL"
+        text name "NOT NULL"
+        text source_file_path "NOT NULL"
+        text_array tags "DEFAULT '{}'"
+        text output_pattern "DEFAULT '{slug}.html'"
+        text output_folder "DEFAULT 'pages'"
+        jsonb variations "DEFAULT '[]'"
+        timestamptz created_at "DEFAULT now()"
+        timestamptz updated_at "DEFAULT now()"
+    }
+    
+    %% ==========================================
+    %% THEMES: Template Library
+    %% ==========================================
+    
+    themes {
+        uuid id PK "gen_random_uuid()"
+        text name "NOT NULL"
+        text description
+        text category "DEFAULT 'general'"
+        text preview_image_url
+        integer file_count "DEFAULT 0"
+        bigint total_size_bytes "DEFAULT 0"
+        boolean is_active "DEFAULT true"
+        text_array tags "DEFAULT '{}'"
+        timestamptz created_at "DEFAULT now()"
+        timestamptz updated_at "DEFAULT now()"
+    }
+    
+    theme_files {
+        uuid id PK "gen_random_uuid()"
+        uuid theme_id FK "NOT NULL CASCADE"
+        text file_path "NOT NULL"
+        text file_name "NOT NULL"
+        text file_type "NOT NULL"
+        text content
+        text storage_url
+        integer size_bytes "DEFAULT 0"
+        timestamptz created_at "DEFAULT now()"
+    }
+    
+    %% ==========================================
+    %% AI: Agents & Knowledge Base
+    %% ==========================================
+    
+    ai_agents {
+        uuid id PK "gen_random_uuid()"
+        text name "NOT NULL"
+        text slug "UNIQUE NOT NULL"
+        text description
+        text system_prompt
+        text color "DEFAULT 'blue'"
+        text icon "DEFAULT 'bot'"
+        boolean is_active "DEFAULT true"
+        boolean is_system "DEFAULT false"
+        timestamptz created_at "DEFAULT now()"
+        timestamptz updated_at "DEFAULT now()"
+    }
+    
+    ai_memories {
+        uuid id PK "gen_random_uuid()"
+        text title "NOT NULL"
+        text content "NOT NULL"
+        text type "DEFAULT 'instruction'"
+        text category "DEFAULT 'general'"
+        text agent "DEFAULT 'all'"
+        integer priority "DEFAULT 0"
+        boolean is_active "DEFAULT true"
+        boolean is_system "DEFAULT false"
+        timestamptz created_at "DEFAULT now()"
+        timestamptz updated_at "DEFAULT now()"
+    }
+    
+    %% ==========================================
+    %% RELATIONSHIPS
+    %% ==========================================
+    
+    projects ||--o{ project_files : "has many"
+    projects ||--o| project_settings : "has one"
+    projects ||--o{ chat_messages : "has many"
+    projects ||--o{ layout_versions : "has many"
+    projects ||--o{ page_templates : "has many"
+    
+    themes ||--o{ theme_files : "has many (CASCADE)"
 ```
-┌─────────────────────┐
-│      projects       │
-├─────────────────────┤
-│ id (PK)             │
-│ name                │
-│ description         │
-│ status              │
-│ layout_tree         │
-│ thumbnail_url       │
-│ created_at          │
-│ updated_at          │
-└─────────┬───────────┘
-          │
-          │ 1:N
-          ▼
-┌─────────────────────┐     ┌─────────────────────┐     ┌─────────────────────┐
-│   project_files     │     │  project_settings   │     │   chat_messages     │
-├─────────────────────┤     ├─────────────────────┤     ├─────────────────────┤
-│ id (PK)             │     │ id (PK)             │     │ id (PK)             │
-│ project_id (FK)     │◄────│ project_id (FK)     │     │ project_id (FK)     │
-│ file_path           │     │ company_name        │     │ role                │
-│ file_name           │     │ slogan              │     │ content             │
-│ file_type           │     │ logo_url            │     │ metadata            │
-│ content             │     │ favicon_url         │     │ created_at          │
-│ created_at          │     │ gallery_images      │     └─────────────────────┘
-│ updated_at          │     │ address, city...    │
-└─────────────────────┘     │ phone, whatsapp...  │
-                            │ social_links        │
-┌─────────────────────┐     │ business_hours      │     ┌─────────────────────┐
-│  layout_versions    │     │ custom_fields       │     │   page_templates    │
-├─────────────────────┤     │ created_at          │     ├─────────────────────┤
-│ id (PK)             │     │ updated_at          │     │ id (PK)             │
-│ project_id (FK)     │◄────└─────────────────────┘     │ project_id (FK)     │
-│ layout_tree         │                                 │ name                │
-│ version_number      │                                 │ source_file_path    │
-│ commit_message      │                                 │ tags                │
-│ is_current          │                                 │ output_pattern      │
-│ created_by          │                                 │ output_folder       │
-│ created_at          │                                 │ variations          │
-└─────────────────────┘                                 │ created_at          │
-                                                        │ updated_at          │
-                                                        └─────────────────────┘
 
-┌─────────────────────┐     ┌─────────────────────┐
-│      themes         │     │    theme_files      │
-├─────────────────────┤     ├─────────────────────┤
-│ id (PK)             │◄────│ id (PK)             │
-│ name                │     │ theme_id (FK)       │
-│ description         │     │ file_path           │
-│ category            │     │ file_name           │
-│ preview_image_url   │     │ file_type           │
-│ file_count          │     │ content             │
-│ total_size_bytes    │     │ storage_url         │
-│ is_active           │     │ size_bytes          │
-│ tags                │     │ created_at          │
-│ created_at          │     └─────────────────────┘
-│ updated_at          │
-└─────────────────────┘
+### Diagrama de Fluxo de Dados
 
-┌─────────────────────┐     ┌─────────────────────┐
-│     ai_agents       │     │    ai_memories      │
-├─────────────────────┤     ├─────────────────────┤
-│ id (PK)             │     │ id (PK)             │
-│ name                │     │ title               │
-│ slug                │     │ content             │
-│ description         │     │ type                │
-│ system_prompt       │     │ category            │
-│ color               │     │ agent               │
-│ icon                │     │ priority            │
-│ is_active           │     │ is_active           │
-│ is_system           │     │ is_system           │
-│ created_at          │     │ created_at          │
-│ updated_at          │     │ updated_at          │
-└─────────────────────┘     └─────────────────────┘
+```mermaid
+flowchart TB
+    subgraph User["👤 Usuário"]
+        A[Briefing + Imagens]
+    end
+    
+    subgraph Pipeline["🤖 Pipeline de Geração"]
+        B[Design Analyst]
+        C[Code Generator]
+        D[SEO Specialist]
+    end
+    
+    subgraph Database["🗄️ Banco de Dados"]
+        E[(projects)]
+        F[(project_files)]
+        G[(chat_messages)]
+        H[(ai_memories)]
+        I[(project_settings)]
+    end
+    
+    subgraph Storage["📦 Storage"]
+        J[project-assets]
+        K[theme-assets]
+    end
+    
+    A --> |"1. Cria projeto"| E
+    A --> |"2. Envia briefing"| G
+    G --> |"3. Inicia geração"| B
+    H --> |"Injeta memórias"| B
+    H --> |"Injeta memórias"| C
+    H --> |"Injeta memórias"| D
+    B --> |"4. Design specs"| C
+    C --> |"5. HTML/CSS/JS"| D
+    D --> |"6. Salva arquivos"| F
+    I --> |"Dados do negócio"| C
+    J --> |"Assets do projeto"| F
+    K --> |"Assets do tema"| F
+```
+
+### Diagrama de Estados do Projeto
+
+```mermaid
+stateDiagram-v2
+    [*] --> draft: Criar Projeto
+    draft --> generating: Iniciar Geração
+    generating --> ready: Geração Completa
+    generating --> error: Falha na Geração
+    error --> generating: Tentar Novamente
+    ready --> generating: Regenerar
+    ready --> [*]: Exportar ZIP
 ```
 
 ---

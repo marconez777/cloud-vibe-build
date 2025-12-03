@@ -369,6 +369,92 @@ export type Database = {
         }
         Relationships: []
       }
+      theme_files: {
+        Row: {
+          content: string | null
+          created_at: string | null
+          file_name: string
+          file_path: string
+          file_type: string
+          id: string
+          size_bytes: number | null
+          storage_url: string | null
+          theme_id: string
+        }
+        Insert: {
+          content?: string | null
+          created_at?: string | null
+          file_name: string
+          file_path: string
+          file_type: string
+          id?: string
+          size_bytes?: number | null
+          storage_url?: string | null
+          theme_id: string
+        }
+        Update: {
+          content?: string | null
+          created_at?: string | null
+          file_name?: string
+          file_path?: string
+          file_type?: string
+          id?: string
+          size_bytes?: number | null
+          storage_url?: string | null
+          theme_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "theme_files_theme_id_fkey"
+            columns: ["theme_id"]
+            isOneToOne: false
+            referencedRelation: "themes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      themes: {
+        Row: {
+          category: string | null
+          created_at: string | null
+          description: string | null
+          file_count: number | null
+          id: string
+          is_active: boolean | null
+          name: string
+          preview_image_url: string | null
+          tags: string[] | null
+          total_size_bytes: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          category?: string | null
+          created_at?: string | null
+          description?: string | null
+          file_count?: number | null
+          id?: string
+          is_active?: boolean | null
+          name: string
+          preview_image_url?: string | null
+          tags?: string[] | null
+          total_size_bytes?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          category?: string | null
+          created_at?: string | null
+          description?: string | null
+          file_count?: number | null
+          id?: string
+          is_active?: boolean | null
+          name?: string
+          preview_image_url?: string | null
+          tags?: string[] | null
+          total_size_bytes?: number | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never

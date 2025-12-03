@@ -14,6 +14,7 @@ import VibeChat from "./pages/VibeChat";
 import Versions from "./pages/Versions";
 import PageMultiplier from "./pages/PageMultiplier";
 import ProjectSettings from "./pages/ProjectSettings";
+import Themes from "./pages/Themes";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -36,6 +37,7 @@ const App = () => (
           <Route path="/versions/:projectId" element={<Versions />} />
           <Route path="/page-multiplier/:projectId" element={<PageMultiplier />} />
           <Route path="/settings/:projectId" element={<ProjectSettings />} />
+          <Route path="/themes" element={<Themes />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>

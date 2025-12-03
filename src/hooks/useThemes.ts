@@ -58,13 +58,61 @@ export function useCreateTheme() {
   const queryClient = useQueryClient();
   
   return useMutation({
-    mutationFn: async (formData: FormData) => {
-      const response = await supabase.functions.invoke("import-theme", {
-        body: formData,
-      });
+    mutationFn: async ({ 
+      formData, 
+      onProgress 
+    }: { 
+      formData: FormData; 
+      onProgress?: (progress: number) => void;
+    }) => {
+      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+      const supabaseKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
       
-      if (response.error) throw response.error;
-      return response.data;
+      return new Promise((resolve, reject) => {
+        const xhr = new XMLHttpRequest();
+        
+        xhr.upload.addEventListener("progress", (event) => {
+          if (event.lengthComputable && onProgress) {
+            const progress = Math.round((event.loaded / event.total) * 100);
+            onProgress(progress);
+          }
+        });
+        
+        xhr.addEventListener("load", () => {
+          if (xhr.status >= 200 && xhr.status < 300) {
+            try {
+              const data = JSON.parse(xhr.responseText);
+              if (data.error) {
+                reject(new Error(data.error));
+              } else {
+                resolve(data);
+              }
+            } catch {
+              reject(new Error("Resposta inválida do servidor"));
+            }
+          } else {
+            try {
+              const error = JSON.parse(xhr.responseText);
+              reject(new Error(error.error || "Erro ao importar tema"));
+            } catch {
+              reject(new Error(`Erro ${xhr.status}: ${xhr.statusText}`));
+            }
+          }
+        });
+        
+        xhr.addEventListener("error", () => {
+          reject(new Error("Erro de conexão"));
+        });
+        
+        xhr.addEventListener("abort", () => {
+          reject(new Error("Upload cancelado"));
+        });
+        
+        xhr.open("POST", `${supabaseUrl}/functions/v1/import-theme`);
+        xhr.setRequestHeader("apikey", supabaseKey);
+        xhr.setRequestHeader("Authorization", `Bearer ${supabaseKey}`);
+        xhr.send(formData);
+      });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["themes"] });

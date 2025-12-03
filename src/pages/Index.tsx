@@ -281,7 +281,7 @@ export default function Index() {
               <span className="font-heading font-bold">PHPVibe</span>
             </div>
             <p className="text-sm text-muted-foreground">
-              © 2024 PHPVibe. Feito com ❤️ e IA.
+              © {new Date().getFullYear()} PHPVibe. Feito com ❤️ e IA.
             </p>
           </div>
         </div>

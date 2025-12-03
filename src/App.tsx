@@ -3,7 +3,10 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { AuthProvider } from "@/contexts/AuthContext";
+import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
 import Index from "./pages/Index";
+import Auth from "./pages/Auth";
 import Dashboard from "./pages/Dashboard";
 import Projects from "./pages/Projects";
 import Briefing from "./pages/Briefing";
@@ -21,28 +24,35 @@ const queryClient = new QueryClient();
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
-    <TooltipProvider>
-      <Toaster />
-      <Sonner />
-      <BrowserRouter>
-        <Routes>
-          <Route path="/" element={<Index />} />
-          <Route path="/dashboard" element={<Dashboard />} />
-          <Route path="/projects" element={<Projects />} />
-          <Route path="/new" element={<Briefing />} />
-          <Route path="/knowledge" element={<Knowledge />} />
-          <Route path="/help" element={<Help />} />
-          <Route path="/preview/:projectId" element={<Preview />} />
-          <Route path="/vibe/:projectId" element={<VibeChat />} />
-          <Route path="/versions/:projectId" element={<Versions />} />
-          <Route path="/page-multiplier/:projectId" element={<PageMultiplier />} />
-          <Route path="/settings/:projectId" element={<ProjectSettings />} />
-          <Route path="/themes" element={<Themes />} />
-          {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-          <Route path="*" element={<NotFound />} />
-        </Routes>
-      </BrowserRouter>
-    </TooltipProvider>
+    <AuthProvider>
+      <TooltipProvider>
+        <Toaster />
+        <Sonner />
+        <BrowserRouter>
+          <Routes>
+            {/* Public routes */}
+            <Route path="/" element={<Index />} />
+            <Route path="/auth" element={<Auth />} />
+            <Route path="/help" element={<Help />} />
+            
+            {/* Protected routes */}
+            <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+            <Route path="/projects" element={<ProtectedRoute><Projects /></ProtectedRoute>} />
+            <Route path="/new" element={<ProtectedRoute><Briefing /></ProtectedRoute>} />
+            <Route path="/knowledge" element={<ProtectedRoute><Knowledge /></ProtectedRoute>} />
+            <Route path="/preview/:projectId" element={<ProtectedRoute><Preview /></ProtectedRoute>} />
+            <Route path="/vibe/:projectId" element={<ProtectedRoute><VibeChat /></ProtectedRoute>} />
+            <Route path="/versions/:projectId" element={<ProtectedRoute><Versions /></ProtectedRoute>} />
+            <Route path="/page-multiplier/:projectId" element={<ProtectedRoute><PageMultiplier /></ProtectedRoute>} />
+            <Route path="/settings/:projectId" element={<ProtectedRoute><ProjectSettings /></ProtectedRoute>} />
+            <Route path="/themes" element={<ProtectedRoute><Themes /></ProtectedRoute>} />
+            
+            {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+            <Route path="*" element={<NotFound />} />
+          </Routes>
+        </BrowserRouter>
+      </TooltipProvider>
+    </AuthProvider>
   </QueryClientProvider>
 );
 

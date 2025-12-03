@@ -61,7 +61,12 @@ export default function Index() {
                 Ajuda
               </Button>
             </Link>
-            <Link to="/dashboard">
+            <Link to="/auth">
+              <Button variant="outline" size="sm">
+                Entrar
+              </Button>
+            </Link>
+            <Link to="/auth">
               <Button variant="hero" size="sm">
                 Começar Agora
                 <ArrowRight className="ml-1 h-4 w-4" />
@@ -257,7 +262,7 @@ export default function Index() {
                 </span>
                 <span className="flex items-center gap-2">
                   <Check className="h-4 w-4 text-primary" />
-                  Sem Login Obrigatório
+                  Cadastro Rápido
                 </span>
               </div>
             </div>

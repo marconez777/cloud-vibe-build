@@ -2,7 +2,6 @@ import { useState } from "react";
 import { useParams, Link } from "react-router-dom";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Eye,
@@ -16,10 +15,15 @@ import {
   Smartphone,
   Download,
   RefreshCw,
+  FolderTree,
 } from "lucide-react";
 import { useProject } from "@/hooks/useProjects";
-import { LayoutRenderer } from "@/components/preview/LayoutRenderer";
-import type { LayoutTree } from "@/types/layout-tree";
+import { useProjectFiles } from "@/hooks/useProjectFiles";
+import { ResponsivePreview } from "@/components/file-explorer/ResponsivePreview";
+import { FileExplorer } from "@/components/file-explorer/FileExplorer";
+import { ExportOptionsDialog, ExportOptions } from "@/components/export/ExportOptionsDialog";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 
 type ViewMode = "desktop" | "tablet" | "mobile";
 
@@ -32,10 +36,60 @@ const viewModeWidths: Record<ViewMode, string> = {
 export default function Preview() {
   const { projectId } = useParams<{ projectId: string }>();
   const { data: project, isLoading } = useProject(projectId);
+  const { data: files, isLoading: filesLoading } = useProjectFiles(projectId);
   const [viewMode, setViewMode] = useState<ViewMode>("desktop");
   const [activeTab, setActiveTab] = useState("preview");
+  const [exportDialogOpen, setExportDialogOpen] = useState(false);
+  const [isExporting, setIsExporting] = useState(false);
 
-  if (isLoading) {
+  const hasFiles = files && files.length > 0;
+
+  const handleExportZip = async (options: ExportOptions) => {
+    if (!hasFiles) return;
+
+    setIsExporting(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("export-zip", {
+        body: {
+          projectId,
+          projectName: project?.name,
+          projectDescription: project?.description,
+          options,
+        },
+      });
+
+      if (error) throw error;
+
+      if (data.success && data.zipData) {
+        const byteCharacters = atob(data.zipData);
+        const byteNumbers = new Array(byteCharacters.length);
+        for (let i = 0; i < byteCharacters.length; i++) {
+          byteNumbers[i] = byteCharacters.charCodeAt(i);
+        }
+        const byteArray = new Uint8Array(byteNumbers);
+        const blob = new Blob([byteArray], { type: "application/zip" });
+
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = data.filename;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+
+        setExportDialogOpen(false);
+        toast.success(`ZIP exportado com ${data.filesCount} arquivos!`);
+      }
+    } catch (error) {
+      console.error("Export error:", error);
+      toast.error("Erro ao exportar ZIP");
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
+  if (isLoading || filesLoading) {
     return (
       <AppLayout>
         <div className="flex h-full items-center justify-center">
@@ -60,8 +114,6 @@ export default function Preview() {
       </AppLayout>
     );
   }
-
-  const layoutTree = project.layout_tree as unknown as LayoutTree | null;
 
   return (
     <AppLayout>
@@ -128,7 +180,12 @@ export default function Preview() {
                 Versões
               </Button>
             </Link>
-            <Button variant="hero" size="sm">
+            <Button 
+              variant="hero" 
+              size="sm"
+              onClick={() => setExportDialogOpen(true)}
+              disabled={!hasFiles}
+            >
               <Download className="mr-2 h-4 w-4" />
               Exportar
             </Button>
@@ -144,20 +201,20 @@ export default function Preview() {
                   <Eye className="h-4 w-4" />
                   Preview
                 </TabsTrigger>
-                <TabsTrigger value="code" className="gap-2">
-                  <Code2 className="h-4 w-4" />
-                  Código
+                <TabsTrigger value="files" className="gap-2">
+                  <FolderTree className="h-4 w-4" />
+                  Arquivos
                 </TabsTrigger>
               </TabsList>
             </div>
 
             <TabsContent value="preview" className="h-[calc(100%-3rem)] m-0 p-4">
               <div
-                className="mx-auto h-full overflow-auto rounded-lg border border-border bg-white shadow-lg transition-all duration-300"
+                className="mx-auto h-full overflow-hidden rounded-lg border border-border bg-white shadow-lg transition-all duration-300"
                 style={{ maxWidth: viewModeWidths[viewMode] }}
               >
-                {layoutTree ? (
-                  <LayoutRenderer layoutTree={layoutTree} />
+                {hasFiles ? (
+                  <ResponsivePreview files={files} />
                 ) : (
                   <div className="flex h-full flex-col items-center justify-center gap-4 p-8 text-center">
                     <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-primary/10">
@@ -165,10 +222,10 @@ export default function Preview() {
                     </div>
                     <div>
                       <h3 className="font-heading font-semibold">
-                        Layout não gerado
+                        Site não gerado
                       </h3>
                       <p className="mt-1 text-sm text-muted-foreground">
-                        Use o VibeChat para gerar o layout do seu site
+                        Use o VibeChat para gerar o site
                       </p>
                     </div>
                     <Link to={`/vibe/${projectId}`}>
@@ -182,20 +239,45 @@ export default function Preview() {
               </div>
             </TabsContent>
 
-            <TabsContent value="code" className="h-[calc(100%-3rem)] m-0 p-4">
-              <Card variant="glass" className="h-full overflow-auto">
-                <pre className="p-4 text-sm">
-                  <code className="text-muted-foreground">
-                    {layoutTree
-                      ? JSON.stringify(layoutTree, null, 2)
-                      : "// Layout não gerado ainda"}
-                  </code>
-                </pre>
-              </Card>
+            <TabsContent value="files" className="h-[calc(100%-3rem)] m-0 p-4">
+              <div className="h-full rounded-lg border border-border bg-background shadow-lg overflow-hidden">
+                {hasFiles ? (
+                  <FileExplorer projectId={projectId!} />
+                ) : (
+                  <div className="flex h-full flex-col items-center justify-center gap-4 p-8 text-center">
+                    <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-primary/10">
+                      <Code2 className="h-8 w-8 text-primary" />
+                    </div>
+                    <div>
+                      <h3 className="font-heading font-semibold">
+                        Nenhum arquivo gerado
+                      </h3>
+                      <p className="mt-1 text-sm text-muted-foreground">
+                        Use o VibeChat para gerar os arquivos
+                      </p>
+                    </div>
+                    <Link to={`/vibe/${projectId}`}>
+                      <Button variant="hero">
+                        <MessageSquare className="mr-2 h-4 w-4" />
+                        Abrir VibeChat
+                      </Button>
+                    </Link>
+                  </div>
+                )}
+              </div>
             </TabsContent>
           </Tabs>
         </div>
       </div>
+
+      <ExportOptionsDialog
+        open={exportDialogOpen}
+        onOpenChange={setExportDialogOpen}
+        onExport={handleExportZip}
+        isExporting={isExporting}
+        projectName={project.name}
+        filesCount={files?.length || 0}
+      />
     </AppLayout>
   );
 }

@@ -366,7 +366,7 @@ async function analyzeDesign(briefing: string, referenceImages?: string[]): Prom
   }
 }
 
-async function optimizeSEO(files: any[], businessInfo?: any): Promise<any[]> {
+async function optimizeSEO(files: any[], businessInfo?: any): Promise<{ files: any[]; applied: boolean }> {
   const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
   const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
   
@@ -384,15 +384,15 @@ async function optimizeSEO(files: any[], businessInfo?: any): Promise<any[]> {
 
     if (!response.ok) {
       console.error("SEO Specialist error:", response.status);
-      return files; // Return original files if SEO fails
+      return { files, applied: false };
     }
 
     const data = await response.json();
     console.log("SEO Specialist response:", data.success);
-    return data.files || files;
+    return { files: data.files || files, applied: data.success === true };
   } catch (error) {
     console.error("Error calling SEO Specialist:", error);
-    return files; // Return original files if SEO fails
+    return { files, applied: false };
   }
 }
 
@@ -569,14 +569,16 @@ serve(async (req) => {
     }
 
     let finalFiles = filesData.files;
+    let seoApplied = false;
 
     // Step 4: Call SEO Specialist (only for generation mode)
     if (!editMode) {
       console.log("Step 4: Calling SEO Specialist...");
-      const optimizedFiles = await optimizeSEO(finalFiles, { briefing: briefing || userMessage });
-      if (optimizedFiles && optimizedFiles.length > 0) {
-        finalFiles = optimizedFiles;
-        console.log("SEO optimizations applied");
+      const seoResult = await optimizeSEO(finalFiles, { briefing: briefing || userMessage });
+      if (seoResult.files && seoResult.files.length > 0) {
+        finalFiles = seoResult.files;
+        seoApplied = seoResult.applied;
+        console.log("SEO optimizations applied:", seoApplied);
       }
     }
 
@@ -614,6 +616,7 @@ serve(async (req) => {
       JSON.stringify({
         success: true,
         files: finalFiles,
+        seoApplied: editMode ? undefined : seoApplied,
         message: editMode ? "Arquivos atualizados com sucesso!" : "Site gerado com pipeline de 3 agentes (OpenAI)!",
       }),
       {

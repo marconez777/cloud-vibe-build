@@ -62,6 +62,15 @@ serve(async (req) => {
       );
     }
 
+    // Validate file size (50MB max)
+    const MAX_FILE_SIZE = 50 * 1024 * 1024;
+    if (zipFile.size > MAX_FILE_SIZE) {
+      return new Response(
+        JSON.stringify({ error: "Arquivo muito grande. Tamanho máximo: 50MB" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
     console.log(`Processing theme upload: ${name}, file: ${zipFile.name}, size: ${zipFile.size}`);
 
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
@@ -154,9 +163,14 @@ serve(async (req) => {
           size_bytes: blob.size,
         });
 
-        // Use first image as preview
-        if (!previewImageUrl && IMAGE_EXTENSIONS.some(ext => fileName.toLowerCase().endsWith(ext))) {
-          previewImageUrl = publicUrl.publicUrl;
+        // Prioritize preview image: preview.png > screenshot.png > largest image > first image
+        const lowerFileName = fileName.toLowerCase();
+        if (IMAGE_EXTENSIONS.some(ext => lowerFileName.endsWith(ext))) {
+          if (lowerFileName.includes("preview") || lowerFileName.includes("screenshot")) {
+            previewImageUrl = publicUrl.publicUrl;
+          } else if (!previewImageUrl) {
+            previewImageUrl = publicUrl.publicUrl;
+          }
         }
       }
     }

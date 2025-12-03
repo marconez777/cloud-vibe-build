@@ -37,7 +37,21 @@ export function ThemeUpload({ open, onOpenChange }: ThemeUploadProps) {
   const { toast } = useToast();
   const createTheme = useCreateTheme();
 
-  const onDrop = useCallback((acceptedFiles: File[]) => {
+  const MAX_FILE_SIZE = 50 * 1024 * 1024; // 50MB
+
+  const onDrop = useCallback((acceptedFiles: File[], rejectedFiles: any[]) => {
+    if (rejectedFiles.length > 0) {
+      const error = rejectedFiles[0]?.errors?.[0];
+      if (error?.code === "file-too-large") {
+        toast({
+          title: "Arquivo muito grande",
+          description: "O tamanho máximo permitido é 50MB",
+          variant: "destructive",
+        });
+      }
+      return;
+    }
+    
     const zipFile = acceptedFiles[0];
     if (zipFile) {
       setFile(zipFile);
@@ -45,7 +59,7 @@ export function ThemeUpload({ open, onOpenChange }: ThemeUploadProps) {
         setName(zipFile.name.replace(/\.zip$/i, ""));
       }
     }
-  }, [name]);
+  }, [name, toast]);
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop,
@@ -54,6 +68,7 @@ export function ThemeUpload({ open, onOpenChange }: ThemeUploadProps) {
       "application/x-zip-compressed": [".zip"],
     },
     maxFiles: 1,
+    maxSize: MAX_FILE_SIZE,
   });
 
   const handleSubmit = async () => {

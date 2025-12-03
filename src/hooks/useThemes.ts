@@ -129,9 +129,9 @@ export function useCopyThemeToProject() {
         throw new Error("Tema não possui arquivos");
       }
       
-      // Copy files to project_files
-      const projectFiles = themeFiles
-        .filter(f => f.content) // Only text files
+      // Copy text files to project_files
+      const textFiles = themeFiles
+        .filter(f => f.content)
         .map(f => ({
           project_id: projectId,
           file_path: f.file_path,
@@ -140,15 +140,33 @@ export function useCopyThemeToProject() {
           content: f.content!,
         }));
       
-      if (projectFiles.length > 0) {
+      // Copy binary files (images/fonts) - create placeholder entries with storage URLs
+      const binaryFiles = themeFiles
+        .filter(f => f.storage_url && !f.content)
+        .map(f => ({
+          project_id: projectId,
+          file_path: f.file_path,
+          file_name: f.file_name,
+          file_type: f.file_type,
+          // Store storage URL as content for binary files - can be used during export
+          content: `<!-- ASSET_URL: ${f.storage_url} -->`,
+        }));
+      
+      const allFiles = [...textFiles, ...binaryFiles];
+      
+      if (allFiles.length > 0) {
         const { error: insertError } = await supabase
           .from("project_files")
-          .insert(projectFiles);
+          .insert(allFiles);
         
         if (insertError) throw insertError;
       }
       
-      return { copiedFiles: projectFiles.length };
+      return { 
+        copiedFiles: allFiles.length,
+        textFiles: textFiles.length,
+        binaryFiles: binaryFiles.length,
+      };
     },
     onSuccess: (_, { projectId }) => {
       queryClient.invalidateQueries({ queryKey: ["project-files", projectId] });

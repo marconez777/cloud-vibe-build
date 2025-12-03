@@ -65,9 +65,21 @@ export default function VibeChat() {
     completeGeneration,
     setError,
     reset: resetGeneration,
+    checkTimeout,
   } = useGenerationStatus();
 
   const hasFiles = files && files.length > 0;
+
+  // Active timeout checking during generation
+  useEffect(() => {
+    if (!isGenerating) return;
+    
+    const interval = setInterval(() => {
+      checkTimeout();
+    }, 5000);
+    
+    return () => clearInterval(interval);
+  }, [isGenerating, checkTimeout]);
 
   // Initialize messages from database
   useEffect(() => {
@@ -192,7 +204,7 @@ export default function VibeChat() {
 
         const successContent = isEditMode
           ? `${data.files?.length || 0} arquivo(s) atualizado(s)! Veja o preview ou explore os arquivos.`
-          : `Site gerado com ${data.files?.length || 0} arquivo(s)!\n\n📁 Estrutura:\n• index.html\n• css/ (estilos)\n• components/ (header, footer)\n• js/ (scripts)\n\nExplore os arquivos ou continue editando via chat.`;
+          : `Site gerado com sucesso!\n\n📁 Estrutura:\n• index.html (HTML + CSS + JS inline)\n\nExplore os arquivos ou continue editando via chat.`;
 
         const successMsg: LocalMessage = {
           id: `success-${Date.now()}`,

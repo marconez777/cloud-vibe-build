@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { 
   Palette, Eye, Code, Search, Sparkles, Check, Loader2, 
-  AlertTriangle, Clock, Zap, FileText, Tags
+  AlertTriangle, Clock, Zap
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Progress } from "@/components/ui/progress";
@@ -21,8 +21,6 @@ const stageConfig: Record<GenerationStage, { icon: typeof Eye; color: string }> 
   design_analyst: { icon: Palette, color: "text-purple-500" },
   code_generator: { icon: Code, color: "text-green-500" },
   seo_specialist: { icon: Search, color: "text-orange-500" },
-  personalizing: { icon: FileText, color: "text-pink-500" },
-  metadata: { icon: Tags, color: "text-amber-500" },
   saving: { icon: Sparkles, color: "text-cyan-500" },
   complete: { icon: Check, color: "text-emerald-500" },
   error: { icon: AlertTriangle, color: "text-destructive" },

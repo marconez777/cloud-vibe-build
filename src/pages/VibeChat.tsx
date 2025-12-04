@@ -96,17 +96,9 @@ export default function VibeChat() {
         );
       } else if (project) {
         // Add welcome message
-        const layoutTree = project?.layout_tree as { fromTheme?: string } | null;
-        const isFromTemplate = hasFiles && !!layoutTree?.fromTheme;
-        
-        let welcomeContent: string;
-        if (isFromTemplate) {
-          welcomeContent = `Template carregado para "${project.name}"!\n\nClique em "Personalizar Template" para substituir os textos genéricos pelos dados do seu negócio.\n\nDepois da personalização, você pode editar via chat.`;
-        } else if (hasFiles) {
-          welcomeContent = "Arquivos carregados! Você pode editar via chat:\n\n• \"mude a cor primária para azul\"\n• \"adicione um formulário de contato\"\n• \"inclua uma seção de depoimentos\"";
-        } else {
-          welcomeContent = `Olá! Vou criar os arquivos do site para "${project.name}". ${project.description ? `\n\nBriefing: ${project.description}\n\nClique em "Gerar Site" ou descreva o que você quer.` : "Descreva como você quer que o site seja."}`;
-        }
+        const welcomeContent = hasFiles
+          ? "Arquivos carregados! Você pode editar via chat:\n\n• \"mude a cor primária para azul\"\n• \"adicione um formulário de contato\"\n• \"inclua uma seção de depoimentos\""
+          : `Olá! Vou criar os arquivos do site para "${project.name}". ${project.description ? `\n\nBriefing: ${project.description}\n\nClique em "Gerar Site" ou descreva o que você quer.` : "Descreva como você quer que o site seja."}`;
         
         const welcomeMsg: LocalMessage = {
           id: "welcome",
@@ -209,103 +201,8 @@ export default function VibeChat() {
         toast.success("Arquivos atualizados!");
 
       } else {
-        // Check if project was created from a template
-        const layoutTree = project?.layout_tree as { fromTheme?: string } | null;
-        const isFromTemplate = hasFiles && !!layoutTree?.fromTheme;
-
-        if (isFromTemplate) {
-          // TEMPLATE PERSONALIZATION MODE: 2 stages (faster, preserves structure)
-          const briefing = project?.description || userMessage || "";
-          
-          const currentFiles = files?.map((f) => ({
-            path: f.file_path,
-            name: f.file_name,
-            type: f.file_type,
-            content: f.content,
-          }));
-
-          // Stage 1: Personalize Template
-          updateStage("personalizing", "Personalizando textos do template...");
-          console.log("Template Mode - Stage 1: Calling personalize-template...");
-          
-          const { data: personalized, error: personalizeError } = await supabase.functions.invoke("personalize-template", {
-            body: { files: currentFiles, projectSettings, briefing },
-          });
-
-          if (personalizeError) {
-            console.error("Personalize error:", personalizeError);
-            throw new Error(`Personalização falhou: ${personalizeError.message}`);
-          }
-
-          let finalFiles = personalized?.files || currentFiles;
-          console.log("Personalization complete. Files:", finalFiles.length);
-
-          // Stage 2: Update Metadata
-          updateStage("metadata", "Atualizando metadados SEO...");
-          console.log("Template Mode - Stage 2: Calling update-metadata...");
-          
-          try {
-            const { data: metadataData, error: metadataError } = await supabase.functions.invoke("update-metadata", {
-              body: { files: finalFiles, projectSettings },
-            });
-
-            if (!metadataError && metadataData?.success && metadataData?.files) {
-              finalFiles = metadataData.files;
-              console.log("Metadata update complete");
-            } else {
-              console.warn("Metadata update did not apply");
-            }
-          } catch (metadataErr) {
-            console.warn("Metadata update failed, using personalized files:", metadataErr);
-          }
-
-          // Stage 3: Save to database
-          updateStage("saving", "Salvando arquivos...");
-          console.log("Template Mode - Stage 3: Saving files...");
-
-          await supabase.from("project_files").delete().eq("project_id", projectId);
-
-          const filesToInsert = finalFiles.map((file: any) => ({
-            project_id: projectId,
-            file_path: file.path,
-            file_name: file.name,
-            file_type: file.type,
-            content: file.content,
-          }));
-
-          const { error: insertError } = await supabase
-            .from("project_files")
-            .insert(filesToInsert);
-
-          if (insertError) {
-            console.error("Database insert error:", insertError);
-            throw insertError;
-          }
-
-          await supabase
-            .from("projects")
-            .update({ status: "ready", updated_at: new Date().toISOString() })
-            .eq("id", projectId);
-
-          await refetchFiles();
-          queryClient.invalidateQueries({ queryKey: ["project", projectId] });
-          completeGeneration();
-
-          const successContent = `Template personalizado com sucesso!\n\n📁 ${finalFiles.length} arquivo(s) atualizados\n\nOs textos e metadados foram adaptados para o seu negócio.`;
-          
-          const successMsg: LocalMessage = {
-            id: `success-${Date.now()}`,
-            role: "assistant",
-            content: successContent,
-            timestamp: new Date(),
-          };
-          setLocalMessages((prev) => [...prev, successMsg]);
-          saveMessage.mutate({ projectId, role: "assistant", content: successContent });
-          toast.success("Template personalizado!");
-
-        } else {
-          // GENERATION MODE: Sequential pipeline (3 independent calls)
-          const briefing = project?.description || userMessage || "";
+        // GENERATION MODE: Sequential pipeline (3 independent calls)
+        const briefing = project?.description || userMessage || "";
 
         // Stage 1: Design Analyst
         updateStage("design_analyst", "Design Analyst analisando...");
@@ -469,7 +366,6 @@ Crawl-delay: 1`;
         setLocalMessages((prev) => [...prev, successMsg]);
         saveMessage.mutate({ projectId, role: "assistant", content: successContent });
         toast.success("Site gerado com sucesso!");
-        }
       }
     } catch (error) {
       console.error("Error generating files:", error);
@@ -589,38 +485,29 @@ Crawl-delay: 1`;
             onClearHistory={handleClearHistory}
           />
 
-          {/* Generate/Personalize Button */}
-          {(() => {
-            const layoutTree = project?.layout_tree as { fromTheme?: string } | null;
-            const isFromTemplate = !!layoutTree?.fromTheme;
-            
-            // Show button if: no files OR template project that can be personalized
-            if (!hasFiles || isFromTemplate) {
-              return (
-                <div className="border-b border-border p-4">
-                  <Button
-                    variant="hero"
-                    className="w-full"
-                    onClick={() => generateFiles()}
-                    disabled={isGenerating}
-                  >
-                    {isGenerating ? (
-                      <>
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        {isFromTemplate ? "Personalizando..." : "Gerando..."}
-                      </>
-                    ) : (
-                      <>
-                        <Sparkles className="mr-2 h-4 w-4" />
-                        {isFromTemplate ? "Personalizar Template" : "Gerar Site com IA"}
-                      </>
-                    )}
-                  </Button>
-                </div>
-              );
-            }
-            return null;
-          })()}
+          {/* Generate Button */}
+          {!hasFiles && (
+            <div className="border-b border-border p-4">
+              <Button
+                variant="hero"
+                className="w-full"
+                onClick={() => generateFiles()}
+                disabled={isGenerating}
+              >
+                {isGenerating ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Gerando...
+                  </>
+                ) : (
+                  <>
+                    <Sparkles className="mr-2 h-4 w-4" />
+                    Gerar Site com IA
+                  </>
+                )}
+              </Button>
+            </div>
+          )}
 
           {/* Messages */}
           <ScrollArea className="flex-1 p-4" ref={scrollRef}>

@@ -58,14 +58,6 @@ export default function Briefing() {
 
       const project = await createProject.mutateAsync(projectData);
 
-      // If template selected, mark project as from_theme
-      if (selectedThemeId) {
-        await supabase
-          .from("projects")
-          .update({ layout_tree: { fromTheme: selectedThemeId } })
-          .eq("id", project.id);
-      }
-
       // If a theme was selected, copy its files to the project
       if (selectedThemeId) {
         try {

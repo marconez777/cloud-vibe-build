@@ -325,25 +325,21 @@ export default function Knowledge() {
                   handleToggleMemory(memory.id, memory.is_active)
                 }
               />
-              {!(memory.is_system ?? false) && (
-                <>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => startEditing(memory)}
-                  >
-                    <Pencil className="h-4 w-4" />
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => handleDeleteClick(memory.id, memory.title)}
-                    disabled={deleteMemory.isPending}
-                  >
-                    <Trash2 className="h-4 w-4 text-destructive" />
-                  </Button>
-                </>
-              )}
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => startEditing(memory)}
+              >
+                <Pencil className="h-4 w-4" />
+              </Button>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => handleDeleteClick(memory.id, memory.title)}
+                disabled={deleteMemory.isPending}
+              >
+                <Trash2 className="h-4 w-4 text-destructive" />
+              </Button>
             </div>
           </div>
         )}

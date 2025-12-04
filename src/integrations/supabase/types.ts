@@ -23,6 +23,7 @@ export type Database = {
           id: string
           is_active: boolean | null
           is_system: boolean | null
+          model: string | null
           name: string
           slug: string
           system_prompt: string | null
@@ -36,6 +37,7 @@ export type Database = {
           id?: string
           is_active?: boolean | null
           is_system?: boolean | null
+          model?: string | null
           name: string
           slug: string
           system_prompt?: string | null
@@ -49,6 +51,7 @@ export type Database = {
           id?: string
           is_active?: boolean | null
           is_system?: boolean | null
+          model?: string | null
           name?: string
           slug?: string
           system_prompt?: string | null

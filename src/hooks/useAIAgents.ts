@@ -9,11 +9,19 @@ export interface AIAgent {
   color: string;
   icon: string;
   system_prompt: string | null;
+  model: string;
   is_active: boolean;
   is_system: boolean;
   created_at: string;
   updated_at: string;
 }
+
+export const AI_MODELS = [
+  { value: "gpt-4o", label: "GPT-4o", description: "Mais capaz, visão, raciocínio avançado" },
+  { value: "gpt-4o-mini", label: "GPT-4o Mini", description: "Rápido e econômico" },
+  { value: "gpt-4-turbo", label: "GPT-4 Turbo", description: "Contexto longo, alta qualidade" },
+  { value: "gpt-3.5-turbo", label: "GPT-3.5 Turbo", description: "Mais rápido, menor custo" },
+] as const;
 
 export const AGENT_COLORS = [
   { value: "violet", label: "Violeta", class: "bg-violet-500" },
@@ -87,6 +95,7 @@ export function useCreateAgent() {
       color = "blue",
       icon = "bot",
       system_prompt,
+      model = "gpt-4o",
     }: {
       name: string;
       slug: string;
@@ -94,10 +103,11 @@ export function useCreateAgent() {
       color?: string;
       icon?: string;
       system_prompt?: string;
+      model?: string;
     }) => {
       const { data, error } = await supabase
         .from("ai_agents")
-        .insert({ name, slug, description, color, icon, system_prompt, is_system: false })
+        .insert({ name, slug, description, color, icon, system_prompt, model, is_system: false })
         .select()
         .single();
 
@@ -121,6 +131,7 @@ export function useUpdateAgent() {
       color,
       icon,
       system_prompt,
+      model,
     }: {
       id: string;
       name?: string;
@@ -128,6 +139,7 @@ export function useUpdateAgent() {
       color?: string;
       icon?: string;
       system_prompt?: string;
+      model?: string;
     }) => {
       const updateData: Partial<AIAgent> = {};
       if (name !== undefined) updateData.name = name;
@@ -135,6 +147,7 @@ export function useUpdateAgent() {
       if (color !== undefined) updateData.color = color;
       if (icon !== undefined) updateData.icon = icon;
       if (system_prompt !== undefined) updateData.system_prompt = system_prompt;
+      if (model !== undefined) updateData.model = model;
 
       const { error } = await supabase
         .from("ai_agents")

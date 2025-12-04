@@ -211,8 +211,103 @@ export default function VibeChat() {
         toast.success("Arquivos atualizados!");
 
       } else {
-        // GENERATION MODE: Sequential pipeline (3 independent calls)
-        const briefing = project?.description || userMessage || "";
+        // Check if project was created from a template
+        const layoutTree = project?.layout_tree as { fromTheme?: string } | null;
+        const isFromTemplate = hasFiles && !!layoutTree?.fromTheme;
+
+        if (isFromTemplate) {
+          // TEMPLATE PERSONALIZATION MODE: 2 stages (faster, preserves structure)
+          const briefing = project?.description || userMessage || "";
+          
+          const currentFiles = files?.map((f) => ({
+            path: f.file_path,
+            name: f.file_name,
+            type: f.file_type,
+            content: f.content,
+          }));
+
+          // Stage 1: Personalize Template
+          updateStage("personalizing", "Personalizando textos do template...");
+          console.log("Template Mode - Stage 1: Calling personalize-template...");
+          
+          const { data: personalized, error: personalizeError } = await supabase.functions.invoke("personalize-template", {
+            body: { files: currentFiles, projectSettings, briefing },
+          });
+
+          if (personalizeError) {
+            console.error("Personalize error:", personalizeError);
+            throw new Error(`Personalização falhou: ${personalizeError.message}`);
+          }
+
+          let finalFiles = personalized?.files || currentFiles;
+          console.log("Personalization complete. Files:", finalFiles.length);
+
+          // Stage 2: Update Metadata
+          updateStage("metadata", "Atualizando metadados SEO...");
+          console.log("Template Mode - Stage 2: Calling update-metadata...");
+          
+          try {
+            const { data: metadataData, error: metadataError } = await supabase.functions.invoke("update-metadata", {
+              body: { files: finalFiles, projectSettings },
+            });
+
+            if (!metadataError && metadataData?.success && metadataData?.files) {
+              finalFiles = metadataData.files;
+              console.log("Metadata update complete");
+            } else {
+              console.warn("Metadata update did not apply");
+            }
+          } catch (metadataErr) {
+            console.warn("Metadata update failed, using personalized files:", metadataErr);
+          }
+
+          // Stage 3: Save to database
+          updateStage("saving", "Salvando arquivos...");
+          console.log("Template Mode - Stage 3: Saving files...");
+
+          await supabase.from("project_files").delete().eq("project_id", projectId);
+
+          const filesToInsert = finalFiles.map((file: any) => ({
+            project_id: projectId,
+            file_path: file.path,
+            file_name: file.name,
+            file_type: file.type,
+            content: file.content,
+          }));
+
+          const { error: insertError } = await supabase
+            .from("project_files")
+            .insert(filesToInsert);
+
+          if (insertError) {
+            console.error("Database insert error:", insertError);
+            throw insertError;
+          }
+
+          await supabase
+            .from("projects")
+            .update({ status: "ready", updated_at: new Date().toISOString() })
+            .eq("id", projectId);
+
+          await refetchFiles();
+          queryClient.invalidateQueries({ queryKey: ["project", projectId] });
+          completeGeneration();
+
+          const successContent = `Template personalizado com sucesso!\n\n📁 ${finalFiles.length} arquivo(s) atualizados\n\nOs textos e metadados foram adaptados para o seu negócio.`;
+          
+          const successMsg: LocalMessage = {
+            id: `success-${Date.now()}`,
+            role: "assistant",
+            content: successContent,
+            timestamp: new Date(),
+          };
+          setLocalMessages((prev) => [...prev, successMsg]);
+          saveMessage.mutate({ projectId, role: "assistant", content: successContent });
+          toast.success("Template personalizado!");
+
+        } else {
+          // GENERATION MODE: Sequential pipeline (3 independent calls)
+          const briefing = project?.description || userMessage || "";
 
         // Stage 1: Design Analyst
         updateStage("design_analyst", "Design Analyst analisando...");
@@ -376,6 +471,7 @@ Crawl-delay: 1`;
         setLocalMessages((prev) => [...prev, successMsg]);
         saveMessage.mutate({ projectId, role: "assistant", content: successContent });
         toast.success("Site gerado com sucesso!");
+        }
       }
     } catch (error) {
       console.error("Error generating files:", error);

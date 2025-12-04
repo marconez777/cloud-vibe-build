@@ -96,12 +96,22 @@ export default function VibeChat() {
         );
       } else if (project) {
         // Add welcome message
+        const layoutTree = project?.layout_tree as { fromTheme?: string } | null;
+        const isFromTemplate = hasFiles && !!layoutTree?.fromTheme;
+        
+        let welcomeContent: string;
+        if (isFromTemplate) {
+          welcomeContent = `Template carregado para "${project.name}"!\n\nClique em "Personalizar Template" para substituir os textos genéricos pelos dados do seu negócio.\n\nDepois da personalização, você pode editar via chat.`;
+        } else if (hasFiles) {
+          welcomeContent = "Arquivos carregados! Você pode editar via chat:\n\n• \"mude a cor primária para azul\"\n• \"adicione um formulário de contato\"\n• \"inclua uma seção de depoimentos\"";
+        } else {
+          welcomeContent = `Olá! Vou criar os arquivos do site para "${project.name}". ${project.description ? `\n\nBriefing: ${project.description}\n\nClique em "Gerar Site" ou descreva o que você quer.` : "Descreva como você quer que o site seja."}`;
+        }
+        
         const welcomeMsg: LocalMessage = {
           id: "welcome",
           role: "assistant",
-          content: hasFiles
-            ? "Arquivos carregados! Você pode editar via chat:\n\n• \"mude a cor primária para azul\"\n• \"adicione um formulário de contato\"\n• \"inclua uma seção de depoimentos\""
-            : `Olá! Vou criar os arquivos do site para "${project.name}". ${project.description ? `\n\nBriefing: ${project.description}\n\nClique em "Gerar Site" ou descreva o que você quer.` : "Descreva como você quer que o site seja."}`,
+          content: welcomeContent,
           timestamp: new Date(),
         };
         setLocalMessages([welcomeMsg]);
@@ -109,18 +119,6 @@ export default function VibeChat() {
       setInitialized(true);
     }
   }, [savedMessages, messagesLoading, project, hasFiles, initialized]);
-
-  // Update welcome message when files load
-  useEffect(() => {
-    if (hasFiles && localMessages.length === 1 && localMessages[0].id === "welcome") {
-      setLocalMessages([{
-        id: "welcome",
-        role: "assistant",
-        content: "Arquivos carregados! Você pode editar via chat:\n\n• \"mude a cor primária para azul\"\n• \"adicione um formulário de contato\"\n• \"inclua uma seção de depoimentos\"",
-        timestamp: new Date(),
-      }]);
-    }
-  }, [hasFiles]);
 
   useEffect(() => {
     if (scrollRef.current) {
@@ -591,29 +589,38 @@ Crawl-delay: 1`;
             onClearHistory={handleClearHistory}
           />
 
-          {/* Generate Button */}
-          {!hasFiles && (
-            <div className="border-b border-border p-4">
-              <Button
-                variant="hero"
-                className="w-full"
-                onClick={() => generateFiles()}
-                disabled={isGenerating}
-              >
-                {isGenerating ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Gerando...
-                  </>
-                ) : (
-                  <>
-                    <Sparkles className="mr-2 h-4 w-4" />
-                    Gerar Site com IA
-                  </>
-                )}
-              </Button>
-            </div>
-          )}
+          {/* Generate/Personalize Button */}
+          {(() => {
+            const layoutTree = project?.layout_tree as { fromTheme?: string } | null;
+            const isFromTemplate = !!layoutTree?.fromTheme;
+            
+            // Show button if: no files OR template project that can be personalized
+            if (!hasFiles || isFromTemplate) {
+              return (
+                <div className="border-b border-border p-4">
+                  <Button
+                    variant="hero"
+                    className="w-full"
+                    onClick={() => generateFiles()}
+                    disabled={isGenerating}
+                  >
+                    {isGenerating ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        {isFromTemplate ? "Personalizando..." : "Gerando..."}
+                      </>
+                    ) : (
+                      <>
+                        <Sparkles className="mr-2 h-4 w-4" />
+                        {isFromTemplate ? "Personalizar Template" : "Gerar Site com IA"}
+                      </>
+                    )}
+                  </Button>
+                </div>
+              );
+            }
+            return null;
+          })()}
 
           {/* Messages */}
           <ScrollArea className="flex-1 p-4" ref={scrollRef}>

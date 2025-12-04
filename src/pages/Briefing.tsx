@@ -12,6 +12,7 @@ import { useCreateProject } from "@/hooks/useProjects";
 import { ImageUpload } from "@/components/ImageUpload";
 import { ThemeSelector } from "@/components/themes/ThemeSelector";
 import { useCopyThemeToProject } from "@/hooks/useThemes";
+import { supabase } from "@/integrations/supabase/client";
 
 const examples = [
   "Site para clínica odontológica com hero, serviços, depoimentos e contato. Cores azul e branco.",
@@ -48,11 +49,22 @@ export default function Briefing() {
         fullDescription += `\n\n[Imagens de referência: ${referenceImages.join(", ")}]`;
       }
 
-      const project = await createProject.mutateAsync({
+      // Create project with theme flag if template selected
+      const projectData: any = {
         name: name.trim(),
         description: fullDescription,
         status: "draft",
-      });
+      };
+
+      const project = await createProject.mutateAsync(projectData);
+
+      // If template selected, mark project as from_theme
+      if (selectedThemeId) {
+        await supabase
+          .from("projects")
+          .update({ layout_tree: { fromTheme: selectedThemeId } })
+          .eq("id", project.id);
+      }
 
       // If a theme was selected, copy its files to the project
       if (selectedThemeId) {

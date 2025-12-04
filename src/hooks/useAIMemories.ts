@@ -257,8 +257,7 @@ export function useDeleteMemory() {
       const { error } = await supabase
         .from("ai_memories")
         .delete()
-        .eq("id", id)
-        .eq("is_system", false); // Prevent deleting system memories
+        .eq("id", id);
 
       if (error) throw error;
     },

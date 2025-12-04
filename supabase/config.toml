@@ -17,3 +17,9 @@ verify_jwt = false
 
 [functions.optimize-seo]
 verify_jwt = false
+
+[functions.generate-code]
+verify_jwt = false
+
+[functions.import-theme]
+verify_jwt = false

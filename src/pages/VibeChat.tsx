@@ -140,7 +140,8 @@ export default function VibeChat() {
     }
   };
 
-  const generateFiles = async (userMessage?: string) => {
+  // Sequential pipeline - 3 independent calls
+  const generateFilesSequential = async (userMessage?: string) => {
     if (isGenerating || !projectId) return;
 
     startGeneration();
@@ -155,7 +156,6 @@ export default function VibeChat() {
       };
       setLocalMessages((prev) => [...prev, userMsg]);
       
-      // Save user message to database
       saveMessage.mutate({
         projectId,
         role: "user",
@@ -163,56 +163,209 @@ export default function VibeChat() {
       });
     }
 
-    // Update stage based on mode
-    if (isEditMode) {
-      updateStage("code_generator", "Modificando arquivos...");
-    } else {
-      updateStage("design_analyst", "Design Analyst analisando...");
-    }
-
     try {
-      const currentFiles = files?.map((f) => ({
-        path: f.file_path,
-        name: f.file_name,
-        type: f.file_type,
-        content: f.content,
-      }));
+      // Fetch project settings first
+      const { data: projectSettings } = await supabase
+        .from("project_settings")
+        .select("*")
+        .eq("project_id", projectId)
+        .maybeSingle();
 
-      // Simulate pipeline stages for visual feedback
-      if (!isEditMode) {
-        globalThis.setTimeout(() => updateStage("code_generator"), 8000);
-        globalThis.setTimeout(() => updateStage("seo_specialist"), 20000);
-        globalThis.setTimeout(() => updateStage("saving"), 35000);
-      }
+      if (isEditMode) {
+        // EDIT MODE: Call generate-files directly (fast, single call)
+        updateStage("code_generator", "Modificando arquivos...");
+        
+        const currentFiles = files?.map((f) => ({
+          path: f.file_path,
+          name: f.file_name,
+          type: f.file_type,
+          content: f.content,
+        }));
 
-      const { data, error } = await supabase.functions.invoke("generate-files", {
-        body: {
-          projectId,
-          briefing: project?.description || userMessage,
-          currentFiles: isEditMode ? currentFiles : undefined,
-          editMode: isEditMode,
-          userMessage: userMessage,
-        },
-      });
+        const { data, error } = await supabase.functions.invoke("generate-files", {
+          body: {
+            projectId,
+            briefing: project?.description || userMessage,
+            currentFiles,
+            editMode: true,
+            userMessage,
+          },
+        });
 
-      if (error) throw error;
+        if (error) throw error;
+        if (!data.success) throw new Error(data.error || "Erro na edição");
 
-      if (data.success) {
         await refetchFiles();
         queryClient.invalidateQueries({ queryKey: ["project", projectId] });
-
         completeGeneration();
 
-        // Check if SEO was applied
-        if (!isEditMode && data.seoApplied === false) {
-          toast.warning("SEO não foi aplicado. Tente regenerar o site.", {
-            duration: 5000,
-          });
+        const successContent = `${data.files?.length || 0} arquivo(s) atualizado(s)! Veja o preview ou explore os arquivos.`;
+        const successMsg: LocalMessage = {
+          id: `success-${Date.now()}`,
+          role: "assistant",
+          content: successContent,
+          timestamp: new Date(),
+        };
+        setLocalMessages((prev) => [...prev, successMsg]);
+        saveMessage.mutate({ projectId, role: "assistant", content: successContent });
+        toast.success("Arquivos atualizados!");
+
+      } else {
+        // GENERATION MODE: Sequential pipeline (3 independent calls)
+        const briefing = project?.description || userMessage || "";
+
+        // Stage 1: Design Analyst
+        updateStage("design_analyst", "Design Analyst analisando...");
+        console.log("Stage 1: Calling analyze-design...");
+        
+        const { data: designData, error: designError } = await supabase.functions.invoke("analyze-design", {
+          body: { briefing, referenceImages: [] },
+        });
+
+        if (designError) {
+          console.error("Design Analyst error:", designError);
+          throw new Error(`Design Analyst falhou: ${designError.message}`);
         }
 
-        const successContent = isEditMode
-          ? `${data.files?.length || 0} arquivo(s) atualizado(s)! Veja o preview ou explore os arquivos.`
-          : `Site gerado com sucesso!\n\n📁 Estrutura:\n• index.html (HTML + CSS + JS inline)\n\nExplore os arquivos ou continue editando via chat.${data.seoApplied === false ? "\n\n⚠️ Otimização SEO não foi aplicada." : ""}`;
+        const designSpecs = designData?.designSpecs;
+        console.log("Design specs received:", !!designSpecs);
+
+        // Stage 2: Code Generator
+        updateStage("code_generator", "Code Generator criando HTML/CSS/JS...");
+        console.log("Stage 2: Calling generate-code...");
+
+        const { data: codeData, error: codeError } = await supabase.functions.invoke("generate-code", {
+          body: { briefing, designSpecs, projectSettings },
+        });
+
+        if (codeError) {
+          console.error("Code Generator error:", codeError);
+          throw new Error(`Code Generator falhou: ${codeError.message}`);
+        }
+
+        if (!codeData?.success || !codeData?.files) {
+          throw new Error(codeData?.error || "Code Generator não retornou arquivos");
+        }
+
+        let generatedFiles = codeData.files;
+        console.log("Files generated:", generatedFiles.length);
+
+        // Stage 3: SEO Specialist
+        updateStage("seo_specialist", "SEO Specialist otimizando...");
+        console.log("Stage 3: Calling optimize-seo...");
+
+        let seoApplied = false;
+        try {
+          const { data: seoData, error: seoError } = await supabase.functions.invoke("optimize-seo", {
+            body: { files: generatedFiles, businessInfo: projectSettings },
+          });
+
+          if (!seoError && seoData?.success && seoData?.files) {
+            generatedFiles = seoData.files;
+            seoApplied = true;
+            console.log("SEO optimizations applied");
+          } else {
+            console.warn("SEO Specialist did not apply optimizations");
+          }
+        } catch (seoErr) {
+          console.warn("SEO Specialist failed, using unoptimized files:", seoErr);
+        }
+
+        // Stage 4: Generate SEO auxiliary files
+        const customFields = projectSettings?.custom_fields as Record<string, any> | null;
+        const siteUrl = customFields?.seo?.canonical_url || "https://www.seusite.com.br";
+        const companyName = projectSettings?.company_name || "Site";
+        
+        const robotsContent = `# robots.txt for ${companyName}
+User-agent: *
+Allow: /
+Disallow: /admin/
+Disallow: /api/
+Disallow: /*.json$
+
+# Sitemap
+Sitemap: ${siteUrl}/sitemap.xml
+
+# Crawl-delay (optional, for politeness)
+Crawl-delay: 1`;
+
+        generatedFiles.push({
+          path: "robots.txt",
+          name: "robots.txt",
+          type: "txt",
+          content: robotsContent,
+        });
+
+        const htmlFiles = generatedFiles.filter((f: any) => f.type === "html");
+        const today = new Date().toISOString().split("T")[0];
+        
+        let sitemapContent = `<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.sitemaps.org/schemas/sitemap/0.9
+        http://www.sitemaps.org/schemas/sitemap/0.9/sitemap.xsd">
+`;
+        
+        htmlFiles.forEach((file: any) => {
+          const pagePath = file.path === "index.html" ? "" : file.path.replace(".html", "");
+          const priority = file.path === "index.html" ? "1.0" : "0.8";
+          const changefreq = file.path === "index.html" ? "weekly" : "monthly";
+          
+          sitemapContent += `  <url>
+    <loc>${siteUrl}/${pagePath}</loc>
+    <lastmod>${today}</lastmod>
+    <changefreq>${changefreq}</changefreq>
+    <priority>${priority}</priority>
+  </url>
+`;
+        });
+        
+        sitemapContent += `</urlset>`;
+        
+        generatedFiles.push({
+          path: "sitemap.xml",
+          name: "sitemap.xml",
+          type: "xml",
+          content: sitemapContent,
+        });
+
+        // Stage 5: Save to database
+        updateStage("saving", "Salvando arquivos...");
+        console.log("Stage 4: Saving files to database...");
+
+        await supabase.from("project_files").delete().eq("project_id", projectId);
+
+        const filesToInsert = generatedFiles.map((file: any) => ({
+          project_id: projectId,
+          file_path: file.path,
+          file_name: file.name,
+          file_type: file.type,
+          content: file.content,
+        }));
+
+        const { error: insertError } = await supabase
+          .from("project_files")
+          .insert(filesToInsert);
+
+        if (insertError) {
+          console.error("Database insert error:", insertError);
+          throw insertError;
+        }
+
+        await supabase
+          .from("projects")
+          .update({ status: "ready", updated_at: new Date().toISOString() })
+          .eq("id", projectId);
+
+        await refetchFiles();
+        queryClient.invalidateQueries({ queryKey: ["project", projectId] });
+        completeGeneration();
+
+        if (!seoApplied) {
+          toast.warning("SEO não foi aplicado. Tente regenerar o site.", { duration: 5000 });
+        }
+
+        const successContent = `Site gerado com sucesso!\n\n📁 Estrutura:\n• index.html (HTML + CSS + JS inline)\n• robots.txt\n• sitemap.xml\n\nExplore os arquivos ou continue editando via chat.${!seoApplied ? "\n\n⚠️ Otimização SEO não foi aplicada." : ""}`;
 
         const successMsg: LocalMessage = {
           id: `success-${Date.now()}`,
@@ -221,17 +374,8 @@ export default function VibeChat() {
           timestamp: new Date(),
         };
         setLocalMessages((prev) => [...prev, successMsg]);
-        
-        // Save assistant message to database
-        saveMessage.mutate({
-          projectId,
-          role: "assistant",
-          content: successContent,
-        });
-
-        toast.success(isEditMode ? "Arquivos atualizados!" : "Site gerado com sucesso!");
-      } else {
-        throw new Error(data.error || "Erro desconhecido");
+        saveMessage.mutate({ projectId, role: "assistant", content: successContent });
+        toast.success("Site gerado com sucesso!");
       }
     } catch (error) {
       console.error("Error generating files:", error);
@@ -239,7 +383,7 @@ export default function VibeChat() {
       const errorMessage = error instanceof Error ? error.message : "Erro desconhecido";
       setError(errorMessage);
 
-      const errorContent = "Ocorreu um erro ao processar. Por favor, tente novamente.";
+      const errorContent = `Erro: ${errorMessage}. Por favor, tente novamente.`;
       const errorMsg: LocalMessage = {
         id: `error-${Date.now()}`,
         role: "assistant",
@@ -249,10 +393,12 @@ export default function VibeChat() {
       setLocalMessages((prev) => [...prev, errorMsg]);
       toast.error("Erro ao processar");
       
-      // Reset after showing error
       globalThis.setTimeout(() => resetGeneration(), 5000);
     }
   };
+
+  // Alias for backward compatibility
+  const generateFiles = generateFilesSequential;
 
   const handleSend = async () => {
     if (!input.trim() || isGenerating) return;

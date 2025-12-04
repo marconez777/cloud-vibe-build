@@ -6,8 +6,6 @@ export type GenerationStage =
   | "design_analyst"
   | "code_generator"
   | "seo_specialist"
-  | "personalizing"
-  | "metadata"
   | "saving"
   | "complete"
   | "error"
@@ -27,8 +25,6 @@ const STAGE_INFO: Record<GenerationStage, { message: string; progress: number }>
   design_analyst: { message: "Design Analyst extraindo cores e estilos...", progress: 30 },
   code_generator: { message: "Code Generator criando HTML/CSS/JS...", progress: 60 },
   seo_specialist: { message: "SEO Specialist otimizando meta tags...", progress: 85 },
-  personalizing: { message: "Personalizando textos do template...", progress: 40 },
-  metadata: { message: "Atualizando metadados SEO...", progress: 75 },
   saving: { message: "Salvando arquivos no projeto...", progress: 95 },
   complete: { message: "Site gerado com sucesso!", progress: 100 },
   error: { message: "Erro na geração", progress: 0 },

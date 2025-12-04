@@ -34,24 +34,28 @@ async function fetchSEOMemories(supabase: any): Promise<string> {
   }
 }
 
-// Fetch custom system prompt from ai_agents table
-async function fetchCustomAgentPrompt(supabase: any, agentSlug: string): Promise<string> {
+// Fetch agent config (system prompt + model) from ai_agents table
+async function fetchAgentConfig(supabase: any, agentSlug: string): Promise<{ customPrompt: string; model: string }> {
   try {
     const { data, error } = await supabase
       .from("ai_agents")
-      .select("system_prompt")
+      .select("system_prompt, model")
       .eq("slug", agentSlug)
       .eq("is_active", true)
       .single();
 
-    if (error || !data?.system_prompt) {
-      return "";
+    if (error) {
+      console.log(`No agent config found for ${agentSlug}, using defaults`);
+      return { customPrompt: "", model: "gpt-4o-mini" };
     }
 
-    console.log(`Custom system prompt found for ${agentSlug}`);
-    return `\n\n## CUSTOM AGENT INSTRUCTIONS:\n${data.system_prompt}`;
+    console.log(`Agent config found for ${agentSlug}, model: ${data.model || "gpt-4o-mini"}`);
+    return {
+      customPrompt: data.system_prompt ? `\n\n## CUSTOM AGENT INSTRUCTIONS:\n${data.system_prompt}` : "",
+      model: data.model || "gpt-4o-mini",
+    };
   } catch (e) {
-    return "";
+    return { customPrompt: "", model: "gpt-4o-mini" };
   }
 }
 
@@ -325,10 +329,11 @@ serve(async (req) => {
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    // Fetch SEO-specific memories and custom prompt
+    // Fetch SEO-specific memories and agent config
     const memoryContext = await fetchSEOMemories(supabase);
-    const customPrompt = await fetchCustomAgentPrompt(supabase, "seo_specialist");
+    const { customPrompt, model } = await fetchAgentConfig(supabase, "seo_specialist");
     console.log("SEO Memory context loaded:", memoryContext ? "yes" : "no");
+    console.log(`Using model: ${model}`);
 
     const fullPrompt = seoSystemPrompt + memoryContext + customPrompt;
 
@@ -352,7 +357,7 @@ ${JSON.stringify(files, null, 2)}
 
 Return ALL files with SEO optimizations applied.`;
 
-    console.log("Calling OpenAI GPT-4o-mini for SEO optimization...");
+    console.log(`Calling OpenAI ${model} for SEO optimization...`);
 
     const response = await fetch("https://api.openai.com/v1/chat/completions", {
       method: "POST",
@@ -361,7 +366,7 @@ Return ALL files with SEO optimizations applied.`;
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "gpt-4o-mini",
+        model: model,
         messages: [
           { role: "system", content: fullPrompt },
           { role: "user", content: userMessage },

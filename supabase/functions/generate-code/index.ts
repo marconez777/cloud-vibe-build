@@ -236,23 +236,27 @@ async function fetchActiveMemories(supabase: any): Promise<string> {
   }
 }
 
-async function fetchCustomAgentPrompt(supabase: any, agentSlug: string): Promise<string> {
+async function fetchAgentConfig(supabase: any, agentSlug: string): Promise<{ customPrompt: string; model: string }> {
   try {
     const { data, error } = await supabase
       .from("ai_agents")
-      .select("system_prompt")
+      .select("system_prompt, model")
       .eq("slug", agentSlug)
       .eq("is_active", true)
       .single();
 
-    if (error || !data?.system_prompt) {
-      return "";
+    if (error) {
+      console.log(`No agent config found for ${agentSlug}, using defaults`);
+      return { customPrompt: "", model: "gpt-4o" };
     }
 
-    console.log(`Custom system prompt found for ${agentSlug}`);
-    return `\n\n## CUSTOM AGENT INSTRUCTIONS:\n${data.system_prompt}`;
+    console.log(`Agent config found for ${agentSlug}, model: ${data.model || "gpt-4o"}`);
+    return {
+      customPrompt: data.system_prompt ? `\n\n## CUSTOM AGENT INSTRUCTIONS:\n${data.system_prompt}` : "",
+      model: data.model || "gpt-4o",
+    };
   } catch (e) {
-    return "";
+    return { customPrompt: "", model: "gpt-4o" };
   }
 }
 
@@ -335,8 +339,9 @@ serve(async (req) => {
     const memoryContext = await fetchActiveMemories(supabase);
     console.log("Memory context loaded:", memoryContext ? "yes" : "no");
 
-    // Fetch custom agent prompt
-    const customPrompt = await fetchCustomAgentPrompt(supabase, "code_generator");
+    // Fetch agent config (prompt + model)
+    const { customPrompt, model } = await fetchAgentConfig(supabase, "code_generator");
+    console.log(`Using model: ${model}`);
 
     // Build business data prompt
     const businessDataPrompt = buildBusinessDataPrompt(projectSettings);
@@ -351,7 +356,7 @@ serve(async (req) => {
       userPrompt += `\n\nIMPORTANT: Use the BUSINESS DATA provided in the system prompt. Include the company name, logo, contact information, social links, and business hours in the appropriate sections of the website.`;
     }
 
-    console.log("Calling OpenAI GPT-4o...");
+    console.log(`Calling OpenAI ${model}...`);
 
     const response = await fetch("https://api.openai.com/v1/chat/completions", {
       method: "POST",
@@ -360,7 +365,7 @@ serve(async (req) => {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "gpt-4o",
+        model: model,
         messages: [
           { role: "system", content: systemPrompt },
           { role: "user", content: userPrompt },

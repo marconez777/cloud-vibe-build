@@ -31,6 +31,7 @@ import {
   AIAgent,
   AGENT_COLORS,
   AGENT_ICONS,
+  AI_MODELS,
   getAgentColorClass,
   getAgentBadgeClass,
 } from "@/hooks/useAIAgents";
@@ -76,6 +77,7 @@ export function AgentManager() {
     color: "blue",
     icon: "bot",
     system_prompt: "",
+    model: "gpt-4o",
   });
 
   const resetForm = () => {
@@ -86,6 +88,7 @@ export function AgentManager() {
       color: "blue",
       icon: "bot",
       system_prompt: "",
+      model: "gpt-4o",
     });
     setEditingAgent(null);
   };
@@ -100,6 +103,7 @@ export function AgentManager() {
         color: agent.color,
         icon: agent.icon,
         system_prompt: agent.system_prompt || "",
+        model: agent.model || "gpt-4o",
       });
     } else {
       resetForm();
@@ -130,6 +134,7 @@ export function AgentManager() {
           color: formData.color,
           icon: formData.icon,
           system_prompt: formData.system_prompt,
+          model: formData.model,
         });
         toast.success("Agente atualizado com sucesso!");
       } else {
@@ -140,6 +145,7 @@ export function AgentManager() {
           color: formData.color,
           icon: formData.icon,
           system_prompt: formData.system_prompt,
+          model: formData.model,
         });
         toast.success("Agente criado com sucesso!");
       }
@@ -308,6 +314,33 @@ export function AgentManager() {
               </div>
 
               <div className="space-y-2">
+                <Label>Modelo de IA</Label>
+                <Select
+                  value={formData.model}
+                  onValueChange={(value) =>
+                    setFormData((prev) => ({ ...prev, model: value }))
+                  }
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {AI_MODELS.map((m) => (
+                      <SelectItem key={m.value} value={m.value}>
+                        <div className="flex flex-col">
+                          <span>{m.label}</span>
+                          <span className="text-xs text-muted-foreground">{m.description}</span>
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground">
+                  Modelo usado para processar as requisições
+                </p>
+              </div>
+
+              <div className="space-y-2">
                 <Label htmlFor="system_prompt">System Prompt (opcional)</Label>
                 <Textarea
                   id="system_prompt"
@@ -363,11 +396,22 @@ export function AgentManager() {
                   <div>
                     <p className="font-medium">{agent.name}</p>
                     <p className="text-xs opacity-70">{agent.description}</p>
+                    <p className="text-xs opacity-50">Modelo: {agent.model || "gpt-4o"}</p>
                   </div>
                 </div>
-                <Badge variant="secondary" className="text-xs">
-                  Sistema
-                </Badge>
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => handleOpenDialog(agent)}
+                    title="Editar modelo"
+                  >
+                    <Edit2 className="h-4 w-4" />
+                  </Button>
+                  <Badge variant="secondary" className="text-xs">
+                    Sistema
+                  </Badge>
+                </div>
               </div>
             ))}
           </div>
@@ -392,6 +436,7 @@ export function AgentManager() {
                     <div>
                       <p className="font-medium">{agent.name}</p>
                       <p className="text-xs opacity-70">{agent.description}</p>
+                      <p className="text-xs opacity-50">Modelo: {agent.model || "gpt-4o"}</p>
                     </div>
                   </div>
                   <div className="flex items-center gap-2">

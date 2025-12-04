@@ -28,25 +28,29 @@ async function fetchDesignAnalystMemories() {
   return data || [];
 }
 
-// Fetch custom system prompt from ai_agents table
-async function fetchCustomAgentPrompt(agentSlug: string) {
+// Fetch agent config (system prompt + model) from ai_agents table
+async function fetchAgentConfig(agentSlug: string) {
   const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
   const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
   const supabase = createClient(supabaseUrl, supabaseKey);
 
   const { data, error } = await supabase
     .from("ai_agents")
-    .select("system_prompt")
+    .select("system_prompt, model")
     .eq("slug", agentSlug)
     .eq("is_active", true)
     .single();
 
-  if (error || !data?.system_prompt) {
-    return "";
+  if (error) {
+    console.log(`No agent config found for ${agentSlug}, using defaults`);
+    return { customPrompt: "", model: "gpt-4o" };
   }
 
-  console.log(`Custom system prompt found for ${agentSlug}`);
-  return `\n\n## CUSTOM AGENT INSTRUCTIONS:\n${data.system_prompt}`;
+  console.log(`Agent config found for ${agentSlug}, model: ${data.model || "gpt-4o"}`);
+  return {
+    customPrompt: data.system_prompt ? `\n\n## CUSTOM AGENT INSTRUCTIONS:\n${data.system_prompt}` : "",
+    model: data.model || "gpt-4o",
+  };
 }
 
 const designAnalystPrompt = `You are a DESIGN ANALYST AI specialized in extracting precise design specifications from reference images and business context.
@@ -211,8 +215,9 @@ serve(async (req) => {
     }
 
     // Build system prompt with memories and custom prompt
-    const customPrompt = await fetchCustomAgentPrompt("design_analyst");
+    const { customPrompt, model } = await fetchAgentConfig("design_analyst");
     const fullSystemPrompt = designAnalystPrompt + memoryContext + customPrompt;
+    console.log(`Using model: ${model}`);
 
     // Build messages with vision support if images provided
     const messages: any[] = [
@@ -247,7 +252,7 @@ serve(async (req) => {
       content: userContent,
     });
 
-    console.log("Calling OpenAI GPT-4o for design analysis...");
+    console.log(`Calling OpenAI ${model} for design analysis...`);
 
     const response = await fetch("https://api.openai.com/v1/chat/completions", {
       method: "POST",
@@ -256,7 +261,7 @@ serve(async (req) => {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "gpt-4o",
+        model: model,
         messages,
         temperature: 0.3,
         max_tokens: 4096,

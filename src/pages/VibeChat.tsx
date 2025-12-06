@@ -6,6 +6,13 @@ import { Textarea } from "@/components/ui/textarea";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
   Send,
   Loader2,
   Eye,
@@ -16,6 +23,11 @@ import {
   FolderTree,
   Copy,
   Settings,
+  Palette,
+  FileCode,
+  Search,
+  Zap,
+  Layers,
 } from "lucide-react";
 import { ExportOptionsDialog, ExportOptions } from "@/components/export/ExportOptionsDialog";
 import { useProject } from "@/hooks/useProjects";
@@ -38,7 +50,18 @@ interface LocalMessage {
   content: string;
   timestamp: Date;
   isThinking?: boolean;
+  agent?: string;
 }
+
+type AgentType = "pipeline" | "design_analyst" | "code_generator" | "seo_specialist" | "quick_edit";
+
+const agentOptions: { value: AgentType; label: string; icon: React.ReactNode; description: string }[] = [
+  { value: "pipeline", label: "Pipeline Completo", icon: <Layers className="h-4 w-4" />, description: "Design + Code + SEO" },
+  { value: "design_analyst", label: "Design Analyst", icon: <Palette className="h-4 w-4" />, description: "Análise de design" },
+  { value: "code_generator", label: "Code Generator", icon: <FileCode className="h-4 w-4" />, description: "Gerar código" },
+  { value: "seo_specialist", label: "SEO Specialist", icon: <Search className="h-4 w-4" />, description: "Otimizar SEO" },
+  { value: "quick_edit", label: "Editor Rápido", icon: <Zap className="h-4 w-4" />, description: "Edição simples" },
+];
 
 export default function VibeChat() {
   const { projectId } = useParams<{ projectId: string }>();
@@ -53,6 +76,7 @@ export default function VibeChat() {
   const [input, setInput] = useState("");
   const [activeTab, setActiveTab] = useState<"preview" | "files">("preview");
   const [previewPage, setPreviewPage] = useState<string>("index.html");
+  const [selectedAgent, setSelectedAgent] = useState<AgentType>("pipeline");
   const scrollRef = useRef<HTMLDivElement>(null);
   const [initialized, setInitialized] = useState(false);
   const [exportDialogOpen, setExportDialogOpen] = useState(false);
@@ -390,11 +414,261 @@ Crawl-delay: 1`;
   // Alias for backward compatibility
   const generateFiles = generateFilesSequential;
 
+  // Individual agent functions
+  const callDesignAnalyst = async (briefing: string) => {
+    startGeneration();
+    updateStage("design_analyst", "Design Analyst analisando...");
+
+    try {
+      const { data, error } = await supabase.functions.invoke("analyze-design", {
+        body: { briefing, referenceImages: [] },
+      });
+
+      if (error) throw error;
+
+      completeGeneration();
+
+      const designSpecs = data?.designSpecs;
+      const formattedSpecs = designSpecs 
+        ? `📊 **Especificações de Design:**\n\n\`\`\`json\n${JSON.stringify(designSpecs, null, 2)}\n\`\`\``
+        : "Não foi possível extrair especificações de design.";
+
+      return formattedSpecs;
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : "Erro desconhecido";
+      setError(errorMessage);
+      throw error;
+    }
+  };
+
+  const callCodeGenerator = async (briefing: string) => {
+    startGeneration();
+    updateStage("code_generator", "Code Generator criando arquivos...");
+
+    try {
+      const { data: projectSettings } = await supabase
+        .from("project_settings")
+        .select("*")
+        .eq("project_id", projectId)
+        .maybeSingle();
+
+      // First get design specs
+      updateStage("design_analyst", "Obtendo especificações de design...");
+      const { data: designData } = await supabase.functions.invoke("analyze-design", {
+        body: { briefing, referenceImages: [] },
+      });
+
+      updateStage("code_generator", "Gerando código...");
+      const { data, error } = await supabase.functions.invoke("generate-code", {
+        body: { briefing, designSpecs: designData?.designSpecs, projectSettings },
+      });
+
+      if (error) throw error;
+      if (!data?.success || !data?.files) {
+        throw new Error(data?.error || "Code Generator não retornou arquivos");
+      }
+
+      // Save files
+      updateStage("saving", "Salvando arquivos...");
+      await supabase.from("project_files").delete().eq("project_id", projectId);
+
+      const filesToInsert = data.files.map((file: any) => ({
+        project_id: projectId,
+        file_path: file.path,
+        file_name: file.name,
+        file_type: file.type,
+        content: file.content,
+      }));
+
+      await supabase.from("project_files").insert(filesToInsert);
+      await supabase.from("projects").update({ status: "ready", updated_at: new Date().toISOString() }).eq("id", projectId);
+
+      await refetchFiles();
+      queryClient.invalidateQueries({ queryKey: ["project", projectId] });
+      completeGeneration();
+
+      return `✅ ${data.files.length} arquivo(s) gerado(s) pelo Code Generator!\n\n⚠️ SEO não aplicado (use SEO Specialist separadamente).`;
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : "Erro desconhecido";
+      setError(errorMessage);
+      throw error;
+    }
+  };
+
+  const callSEOOptimizer = async () => {
+    if (!files || files.length === 0) {
+      toast.error("Gere o site primeiro para otimizar SEO");
+      return null;
+    }
+
+    startGeneration();
+    updateStage("seo_specialist", "SEO Specialist otimizando...");
+
+    try {
+      const { data: projectSettings } = await supabase
+        .from("project_settings")
+        .select("*")
+        .eq("project_id", projectId)
+        .maybeSingle();
+
+      const currentFiles = files.map((f) => ({
+        path: f.file_path,
+        name: f.file_name,
+        type: f.file_type,
+        content: f.content,
+      }));
+
+      const { data, error } = await supabase.functions.invoke("optimize-seo", {
+        body: { files: currentFiles, businessInfo: projectSettings },
+      });
+
+      if (error) throw error;
+      if (!data?.success || !data?.files) {
+        throw new Error("SEO Specialist não retornou arquivos otimizados");
+      }
+
+      // Update files in database
+      updateStage("saving", "Salvando arquivos otimizados...");
+      
+      for (const file of data.files) {
+        await supabase
+          .from("project_files")
+          .update({ content: file.content, updated_at: new Date().toISOString() })
+          .eq("project_id", projectId)
+          .eq("file_path", file.path);
+      }
+
+      await refetchFiles();
+      completeGeneration();
+
+      return `🔍 SEO otimizado em ${data.files.length} arquivo(s)!\n\nMelhorias aplicadas:\n• Meta tags\n• Schema.org JSON-LD\n• Alt attributes\n• Semantic HTML`;
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : "Erro desconhecido";
+      setError(errorMessage);
+      throw error;
+    }
+  };
+
+  const callQuickEdit = async (userMessage: string) => {
+    if (!files || files.length === 0) {
+      toast.error("Gere o site primeiro para editar");
+      return null;
+    }
+
+    startGeneration();
+    updateStage("code_generator", "Editando arquivos...");
+
+    try {
+      const currentFiles = files.map((f) => ({
+        path: f.file_path,
+        name: f.file_name,
+        type: f.file_type,
+        content: f.content,
+      }));
+
+      const { data, error } = await supabase.functions.invoke("generate-files", {
+        body: {
+          projectId,
+          briefing: project?.description || userMessage,
+          currentFiles,
+          editMode: true,
+          userMessage,
+        },
+      });
+
+      if (error) throw error;
+      if (!data.success) throw new Error(data.error || "Erro na edição");
+
+      await refetchFiles();
+      queryClient.invalidateQueries({ queryKey: ["project", projectId] });
+      completeGeneration();
+
+      return `✏️ ${data.files?.length || 0} arquivo(s) atualizado(s)!`;
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : "Erro desconhecido";
+      setError(errorMessage);
+      throw error;
+    }
+  };
+
+  // Process with selected agent
+  const processWithAgent = async (userMessage: string, agent: AgentType) => {
+    if (!projectId) return;
+
+    const userMsg: LocalMessage = {
+      id: `user-${Date.now()}`,
+      role: "user",
+      content: userMessage,
+      timestamp: new Date(),
+      agent,
+    };
+    setLocalMessages((prev) => [...prev, userMsg]);
+    saveMessage.mutate({ projectId, role: "user", content: userMessage, metadata: { agent } });
+
+    try {
+      let responseContent: string;
+      const briefing = project?.description || userMessage;
+
+      switch (agent) {
+        case "pipeline":
+          // Full pipeline (existing behavior)
+          await generateFilesSequential(userMessage);
+          return; // generateFilesSequential already handles messages
+
+        case "design_analyst":
+          responseContent = await callDesignAnalyst(briefing);
+          break;
+
+        case "code_generator":
+          responseContent = await callCodeGenerator(briefing);
+          break;
+
+        case "seo_specialist":
+          const seoResult = await callSEOOptimizer();
+          responseContent = seoResult || "Não foi possível aplicar SEO.";
+          break;
+
+        case "quick_edit":
+          const editResult = await callQuickEdit(userMessage);
+          responseContent = editResult || "Não foi possível editar.";
+          break;
+
+        default:
+          responseContent = "Agente não reconhecido.";
+      }
+
+      const agentLabel = agentOptions.find(a => a.value === agent)?.label || agent;
+      const successMsg: LocalMessage = {
+        id: `assistant-${Date.now()}`,
+        role: "assistant",
+        content: `**[${agentLabel}]**\n\n${responseContent}`,
+        timestamp: new Date(),
+        agent,
+      };
+      setLocalMessages((prev) => [...prev, successMsg]);
+      saveMessage.mutate({ projectId, role: "assistant", content: successMsg.content, metadata: { agent } });
+      toast.success(`${agentLabel} concluído!`);
+
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : "Erro desconhecido";
+      const errorMsg: LocalMessage = {
+        id: `error-${Date.now()}`,
+        role: "assistant",
+        content: `❌ Erro: ${errorMessage}`,
+        timestamp: new Date(),
+        agent,
+      };
+      setLocalMessages((prev) => [...prev, errorMsg]);
+      toast.error("Erro ao processar");
+      globalThis.setTimeout(() => resetGeneration(), 3000);
+    }
+  };
+
   const handleSend = async () => {
     if (!input.trim() || isGenerating) return;
     const message = input.trim();
     setInput("");
-    await generateFiles(message);
+    await processWithAgent(message, selectedAgent);
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -543,15 +817,35 @@ Crawl-delay: 1`;
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={handleKeyDown}
             />
-            <div className="mt-2 flex justify-between">
+            <div className="mt-3 flex items-center gap-2">
+              {/* Agent Selector */}
+              <Select value={selectedAgent} onValueChange={(v) => setSelectedAgent(v as AgentType)}>
+                <SelectTrigger className="w-[160px] h-8 text-xs">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {agentOptions.map((opt) => (
+                    <SelectItem key={opt.value} value={opt.value}>
+                      <div className="flex items-center gap-2">
+                        {opt.icon}
+                        <span>{opt.label}</span>
+                      </div>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+
+              <div className="flex-1" />
+
               {hasFiles && (
                 <Button
                   variant="outline"
                   size="sm"
                   onClick={() => generateFiles()}
                   disabled={isGenerating}
+                  className="h-8"
                 >
-                  <RefreshCw className="mr-2 h-3 w-3" />
+                  <RefreshCw className="mr-1 h-3 w-3" />
                   Regenerar
                 </Button>
               )}
@@ -560,12 +854,12 @@ Crawl-delay: 1`;
                 size="sm"
                 onClick={handleSend}
                 disabled={!input.trim() || isGenerating}
-                className="ml-auto"
+                className="h-8"
               >
                 {isGenerating ? (
-                  <Loader2 className="mr-2 h-3 w-3 animate-spin" />
+                  <Loader2 className="mr-1 h-3 w-3 animate-spin" />
                 ) : (
-                  <Send className="mr-2 h-3 w-3" />
+                  <Send className="mr-1 h-3 w-3" />
                 )}
                 Enviar
               </Button>

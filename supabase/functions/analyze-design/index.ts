@@ -18,6 +18,7 @@ async function fetchDesignAnalystMemories() {
     .select("title, content")
     .or("agent.eq.design_analyst,agent.eq.all")
     .eq("is_active", true)
+    .eq("is_system", false)
     .order("priority", { ascending: false });
 
   if (error) {

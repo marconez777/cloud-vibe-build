@@ -13,7 +13,6 @@ async function fetchSEOMemories(supabase: any): Promise<string> {
       .from("ai_memories")
       .select("title, content, type, category, priority, agent")
       .eq("is_active", true)
-      .eq("is_system", false)
       .or("agent.eq.seo_specialist,agent.eq.all")
       .order("priority", { ascending: false });
 

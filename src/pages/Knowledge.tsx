@@ -550,52 +550,126 @@ export default function Knowledge() {
                 </TabsTrigger>
               </TabsList>
 
-              <TabsContent value="design_analyst" className="mt-6">
+              <TabsContent value="design_analyst" className="mt-6 space-y-6">
                 {renderMemoriesSection(designAnalystMemories, "design_analyst", designPagination)}
+                <Card variant="glass">
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2 text-base">
+                      <Upload className="h-4 w-4 text-violet-500" />
+                      Arquivos para Design Analyst
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <DocumentUpload
+                      onDocumentUploaded={async (doc) => {
+                        try {
+                          await createMemory.mutateAsync({
+                            title: `Documento: ${doc.name}`,
+                            content: doc.content || `Arquivo carregado: ${doc.url}`,
+                            type: "document",
+                            category: "content",
+                            agent: "design_analyst",
+                          });
+                          toast.success(`"${doc.name}" adicionado ao Design Analyst`);
+                        } catch {
+                          toast.error("Erro ao salvar documento");
+                        }
+                      }}
+                    />
+                  </CardContent>
+                </Card>
               </TabsContent>
 
-              <TabsContent value="code_generator" className="mt-6">
+              <TabsContent value="code_generator" className="mt-6 space-y-6">
                 {renderMemoriesSection(codeGeneratorMemories, "code_generator", codePagination)}
+                <Card variant="glass">
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2 text-base">
+                      <Upload className="h-4 w-4 text-cyan-500" />
+                      Arquivos para Code Generator
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <DocumentUpload
+                      onDocumentUploaded={async (doc) => {
+                        try {
+                          await createMemory.mutateAsync({
+                            title: `Documento: ${doc.name}`,
+                            content: doc.content || `Arquivo carregado: ${doc.url}`,
+                            type: "document",
+                            category: "content",
+                            agent: "code_generator",
+                          });
+                          toast.success(`"${doc.name}" adicionado ao Code Generator`);
+                        } catch {
+                          toast.error("Erro ao salvar documento");
+                        }
+                      }}
+                    />
+                  </CardContent>
+                </Card>
               </TabsContent>
 
-              <TabsContent value="seo_specialist" className="mt-6">
+              <TabsContent value="seo_specialist" className="mt-6 space-y-6">
                 {renderMemoriesSection(seoSpecialistMemories, "seo_specialist", seoPagination)}
+                <Card variant="glass">
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2 text-base">
+                      <Upload className="h-4 w-4 text-amber-500" />
+                      Arquivos para SEO Specialist
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <DocumentUpload
+                      onDocumentUploaded={async (doc) => {
+                        try {
+                          await createMemory.mutateAsync({
+                            title: `Documento: ${doc.name}`,
+                            content: doc.content || `Arquivo carregado: ${doc.url}`,
+                            type: "document",
+                            category: "content",
+                            agent: "seo_specialist",
+                          });
+                          toast.success(`"${doc.name}" adicionado ao SEO Specialist`);
+                        } catch {
+                          toast.error("Erro ao salvar documento");
+                        }
+                      }}
+                    />
+                  </CardContent>
+                </Card>
               </TabsContent>
 
-              <TabsContent value="all" className="mt-6">
+              <TabsContent value="all" className="mt-6 space-y-6">
                 {renderMemoriesSection(sharedMemories, "all", sharedPagination)}
+                <Card variant="glass">
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2 text-base">
+                      <Upload className="h-4 w-4 text-primary" />
+                      Arquivos Compartilhados
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <DocumentUpload
+                      onDocumentUploaded={async (doc) => {
+                        try {
+                          await createMemory.mutateAsync({
+                            title: `Documento: ${doc.name}`,
+                            content: doc.content || `Arquivo carregado: ${doc.url}`,
+                            type: "document",
+                            category: "content",
+                            agent: "all",
+                          });
+                          toast.success(`"${doc.name}" adicionado às Memórias Compartilhadas`);
+                        } catch {
+                          toast.error("Erro ao salvar documento");
+                        }
+                      }}
+                    />
+                  </CardContent>
+                </Card>
               </TabsContent>
             </Tabs>
-
-            {/* File upload */}
-            <Card variant="glass">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-base">
-                  <Upload className="h-4 w-4 text-primary" />
-                  Upload de Arquivos
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <DocumentUpload
-                  onDocumentUploaded={async (doc) => {
-                    try {
-                      await createMemory.mutateAsync({
-                        title: `Documento: ${doc.name}`,
-                        content: doc.content || `Arquivo carregado: ${doc.url}`,
-                        type: "document",
-                        category: "content",
-                        agent: "all",
-                      });
-                      toast.success(
-                        `Documento "${doc.name}" adicionado à base de conhecimento`
-                      );
-                    } catch {
-                      toast.error("Erro ao salvar documento");
-                    }
-                  }}
-                />
-              </CardContent>
-            </Card>
           </div>
 
           {/* Sidebar */}
